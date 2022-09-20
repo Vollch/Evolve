@@ -1,18 +1,9 @@
-import { global, set_alevel, set_ulevel } from './vars.js';
+import { global } from './vars.js';
 import { clearElement, popover, flib, calc_mastery, masteryType, calcPillar, svgIcons, svgViewBox, format_emblem, getBaseIcon, sLevel, vBind, calcQueueMax, calcRQueueMax, messageQueue, eventActive, easterEgg, getHalloween, trickOrTreat, harmonyEffect } from './functions.js';
 import { races, genus_traits } from './races.js';
 import { universe_affixes, universe_types, piracy } from './space.js';
 import { monsters } from './portal.js';
 import { loc } from './locale.js'
-
-
-if (!global.stats['achieve']){
-    global.stats['achieve'] = {};
-}
-
-if (!global.stats['feat']){
-    global.stats['feat'] = {};
-}
 
 const achieve_list = {
     misc: [
@@ -51,216 +42,1716 @@ const achieve_list = {
     challenge: ['joyless','steelen','dissipated','technophobe','wheelbarrow','iron_will','failed_history','banana','pathfinder','ashanddust','exodus','obsolete','gross','lamentis'],
 };
 
-const flairData = {
-    colonist: [flib('name')]
-};
+export var achievements, feats, perkList;
+export function initAchieve(){
+    const flairData = {
+        colonist: [flib('name')]
+    };
+    const descData = {
+        trade: [750,50]
+    };
 
-const descData = {
-    trade: [750,50]
-};
-
-export const achievements = {};
-Object.keys(achieve_list).forEach(function(type){
-    achieve_list[type].forEach(achieve => achievements[achieve] = {
-        name: loc(`achieve_${achieve}_name`),
-        desc: descData[achieve] ? loc(`achieve_${achieve}_desc`,descData[achieve]) : loc(`achieve_${achieve}_desc`),
-        flair: flairData[achieve] ? loc(`achieve_${achieve}_flair`,flairData[achieve]) : loc(`achieve_${achieve}_flair`),
-        type: type
+    achievements = {};
+    Object.keys(achieve_list).forEach(function(type){
+        achieve_list[type].forEach(achieve => achievements[achieve] = {
+            name: loc(`achieve_${achieve}_name`),
+            desc: descData[achieve] ? loc(`achieve_${achieve}_desc`,descData[achieve]) : loc(`achieve_${achieve}_desc`),
+            flair: flairData[achieve] ? loc(`achieve_${achieve}_flair`,flairData[achieve]) : loc(`achieve_${achieve}_flair`),
+            type: type
+        });
     });
-});
 
-export const feats = {
-    utopia: {
-        name: loc("feat_utopia_name"),
-        desc: loc("feat_utopia_desc"),
-        flair: loc("feat_utopia_flair")
-    },
-    take_no_advice: {
-        name: loc("feat_take_no_advice_name"),
-        desc: loc("feat_take_no_advice_desc"),
-        flair: loc("feat_take_no_advice_flair")
-    },
-    ill_advised: {
-        name: loc("feat_ill_advised_name"),
-        desc: loc("feat_ill_advised_desc"),
-        flair: loc("feat_ill_advised_flair")
-    },
-    organ_harvester: {
-        name: loc("feat_organ_harvester_name"),
-        desc: loc("feat_organ_harvester_desc"),
-        flair: loc("feat_organ_harvester_flair")
-    },
-    the_misery: {
-        name: loc("feat_the_misery_name"),
-        desc: loc("feat_the_misery_desc"),
-        flair: loc("feat_the_misery_flair")
-    },
-    energetic: {
-        name: loc("feat_energetic_name"),
-        desc: loc("feat_energetic_desc"),
-        flair: loc("feat_energetic_flair")
-    },
-    garbage_pie: {
-        name: loc("feat_garbage_pie_name"),
-        desc: loc("feat_garbage_pie_desc"),
-        flair: loc("feat_garbage_pie_flair")
-    },
-    finish_line: {
-        name: loc("feat_finish_line_name"),
-        desc: loc("feat_finish_line_desc"),
-        flair: loc("feat_finish_line_flair")
-    },
-    blank_slate: {
-        name: loc("feat_blank_slate_name"),
-        desc: loc("feat_blank_slate_desc"),
-        flair: loc("feat_blank_slate_flair")
-    },
-    supermassive: {
-        name: loc("feat_supermassive_name"),
-        desc: loc("feat_supermassive_desc"),
-        flair: loc("feat_supermassive_flair")
-    },
-    steelem: {
-        name: loc("feat_steelem_name"),
-        desc: loc("feat_steelem_desc"),
-        flair: loc("feat_steelem_flair")
-    },
-    banana: {
-        name: loc("feat_banana_name"),
-        desc: loc("feat_banana_desc",[500,500]),
-        flair: loc("feat_banana_flair")
-    },
-    rocky_road: {
-        name: loc("feat_rocky_road_name"),
-        desc: loc("feat_rocky_road_desc"),
-        flair: loc("feat_rocky_road_flair")
-    },
-    demon_slayer: {
-        name: loc("feat_demon_slayer_name"),
-        desc: loc("feat_demon_slayer_desc"),
-        flair: loc("feat_demon_slayer_flair")
-    },
-    equilibrium: {
-        name: loc("feat_equilibrium_name"),
-        desc: loc("feat_equilibrium_desc"),
-        flair: loc("feat_equilibrium_flair")
-    },
-    digital_ascension: {
-        name: loc("feat_digital_ascension_name"),
-        desc: loc("feat_digital_ascension_desc"),
-        flair: loc("feat_digital_ascension_flair")
-    },
-    novice: {
-        name: loc("feat_novice_name"),
-        desc: loc("feat_achievement_hunter_desc",[10]),
-        flair: loc("feat_novice_flair")
-    },
-    journeyman: {
-        name: loc("feat_journeyman_name"),
-        desc: loc("feat_achievement_hunter_desc",[25]),
-        flair: loc("feat_journeyman_flair")
-    },
-    adept: {
-        name: loc("feat_adept_name"),
-        desc: loc("feat_achievement_hunter_desc",[50]),
-        flair: loc("feat_adept_flair")
-    },
-    master: {
-        name: loc("feat_master_name"),
-        desc: loc("feat_achievement_hunter_desc",[75]),
-        flair: loc("feat_master_flair")
-    },
-    grandmaster: {
-        name: loc("feat_grandmaster_name"),
-        desc: loc("feat_achievement_hunter_desc",[100]),
-        flair: loc("feat_grandmaster_flair")
-    },
-    nephilim: {
-        name: loc("feat_nephilim_name"),
-        desc: loc("feat_nephilim_desc"),
-        flair: loc("feat_nephilim_flair")
-    },
-    twisted: {
-        name: loc("feat_twisted_name"),
-        desc: loc("feat_twisted_desc"),
-        flair: loc("feat_twisted_flair")
-    },
-    slime_lord: {
-        name: loc("feat_slime_lord_name"),
-        desc: loc("feat_slime_lord_desc"),
-        flair: loc("feat_slime_lord_flair")
-    },
-    friday: {
-        name: loc("feat_friday_name"),
-        desc: loc("feat_friday_desc"),
-        flair: loc("feat_friday_flair")
-    },
-    valentine: {
-        name: loc("feat_love_name"),
-        desc: loc("feat_love_desc"),
-        flair: loc("feat_love_flair")
-    },
-    leprechaun: {
-        name: loc("feat_leprechaun_name"),
-        desc: loc("feat_leprechaun_desc"),
-        flair: loc("feat_leprechaun_flair")
-    },
-    easter: {
-        name: loc("feat_easter_name"),
-        desc: loc("feat_easter_desc"),
-        flair: loc("feat_easter_flair")
-    },
-    egghunt: {
-        name: loc("feat_egghunt_name"),
-        desc: loc("feat_egghunt_desc"),
-        flair: loc("feat_egghunt_flair")
-    },
-    launch_day: {
-        name: loc("feat_launch_day_name"),
-        desc: loc("feat_launch_day_desc"),
-        flair: loc("feat_launch_day_flair")
-    },
-    solstice: {
-        name: loc("feat_solstice_name"),
-        desc: loc("feat_solstice_desc"),
-        flair: loc("feat_solstice_flair")
-    },
-    firework: {
-        name: loc("feat_firework_name"),
-        desc: loc("feat_firework_desc"),
-        flair: loc("feat_firework_flair")
-    },
-    halloween: {
-        name: loc("feat_boo_name"),
-        desc: loc("feat_boo_desc"),
-        flair: loc("feat_boo_flair")
-    },
-    trickortreat: {
-        name: loc("feat_trickortreat_name"),
-        desc: loc("feat_trickortreat_desc"),
-        flair: loc("feat_trickortreat_flair")
-    },
-    thanksgiving: {
-        name: loc("feat_gobble_gobble_name"),
-        desc: loc("feat_gobble_gobble_desc"),
-        flair: loc("feat_gobble_gobble_flair")
-    },
-    xmas: {
-        name: loc("feat_xmas_name"),
-        desc: loc("feat_xmas_desc"),
-        flair: loc("feat_xmas_flair")
-    },
-    fool: {
-        name: loc("feat_fool_name"),
-        desc: loc("feat_fool_desc"),
-        flair: loc("feat_fool_flair")
-    }
-}
+    feats = {
+        utopia: {
+            name: loc("feat_utopia_name"),
+            desc: loc("feat_utopia_desc"),
+            flair: loc("feat_utopia_flair")
+        },
+        take_no_advice: {
+            name: loc("feat_take_no_advice_name"),
+            desc: loc("feat_take_no_advice_desc"),
+            flair: loc("feat_take_no_advice_flair")
+        },
+        ill_advised: {
+            name: loc("feat_ill_advised_name"),
+            desc: loc("feat_ill_advised_desc"),
+            flair: loc("feat_ill_advised_flair")
+        },
+        organ_harvester: {
+            name: loc("feat_organ_harvester_name"),
+            desc: loc("feat_organ_harvester_desc"),
+            flair: loc("feat_organ_harvester_flair")
+        },
+        the_misery: {
+            name: loc("feat_the_misery_name"),
+            desc: loc("feat_the_misery_desc"),
+            flair: loc("feat_the_misery_flair")
+        },
+        energetic: {
+            name: loc("feat_energetic_name"),
+            desc: loc("feat_energetic_desc"),
+            flair: loc("feat_energetic_flair")
+        },
+        garbage_pie: {
+            name: loc("feat_garbage_pie_name"),
+            desc: loc("feat_garbage_pie_desc"),
+            flair: loc("feat_garbage_pie_flair")
+        },
+        finish_line: {
+            name: loc("feat_finish_line_name"),
+            desc: loc("feat_finish_line_desc"),
+            flair: loc("feat_finish_line_flair")
+        },
+        blank_slate: {
+            name: loc("feat_blank_slate_name"),
+            desc: loc("feat_blank_slate_desc"),
+            flair: loc("feat_blank_slate_flair")
+        },
+        supermassive: {
+            name: loc("feat_supermassive_name"),
+            desc: loc("feat_supermassive_desc"),
+            flair: loc("feat_supermassive_flair")
+        },
+        steelem: {
+            name: loc("feat_steelem_name"),
+            desc: loc("feat_steelem_desc"),
+            flair: loc("feat_steelem_flair")
+        },
+        banana: {
+            name: loc("feat_banana_name"),
+            desc: loc("feat_banana_desc",[500,500]),
+            flair: loc("feat_banana_flair")
+        },
+        rocky_road: {
+            name: loc("feat_rocky_road_name"),
+            desc: loc("feat_rocky_road_desc"),
+            flair: loc("feat_rocky_road_flair")
+        },
+        demon_slayer: {
+            name: loc("feat_demon_slayer_name"),
+            desc: loc("feat_demon_slayer_desc"),
+            flair: loc("feat_demon_slayer_flair")
+        },
+        equilibrium: {
+            name: loc("feat_equilibrium_name"),
+            desc: loc("feat_equilibrium_desc"),
+            flair: loc("feat_equilibrium_flair")
+        },
+        digital_ascension: {
+            name: loc("feat_digital_ascension_name"),
+            desc: loc("feat_digital_ascension_desc"),
+            flair: loc("feat_digital_ascension_flair")
+        },
+        novice: {
+            name: loc("feat_novice_name"),
+            desc: loc("feat_achievement_hunter_desc",[10]),
+            flair: loc("feat_novice_flair")
+        },
+        journeyman: {
+            name: loc("feat_journeyman_name"),
+            desc: loc("feat_achievement_hunter_desc",[25]),
+            flair: loc("feat_journeyman_flair")
+        },
+        adept: {
+            name: loc("feat_adept_name"),
+            desc: loc("feat_achievement_hunter_desc",[50]),
+            flair: loc("feat_adept_flair")
+        },
+        master: {
+            name: loc("feat_master_name"),
+            desc: loc("feat_achievement_hunter_desc",[75]),
+            flair: loc("feat_master_flair")
+        },
+        grandmaster: {
+            name: loc("feat_grandmaster_name"),
+            desc: loc("feat_achievement_hunter_desc",[100]),
+            flair: loc("feat_grandmaster_flair")
+        },
+        nephilim: {
+            name: loc("feat_nephilim_name"),
+            desc: loc("feat_nephilim_desc"),
+            flair: loc("feat_nephilim_flair")
+        },
+        twisted: {
+            name: loc("feat_twisted_name"),
+            desc: loc("feat_twisted_desc"),
+            flair: loc("feat_twisted_flair")
+        },
+        slime_lord: {
+            name: loc("feat_slime_lord_name"),
+            desc: loc("feat_slime_lord_desc"),
+            flair: loc("feat_slime_lord_flair")
+        },
+        friday: {
+            name: loc("feat_friday_name"),
+            desc: loc("feat_friday_desc"),
+            flair: loc("feat_friday_flair")
+        },
+        valentine: {
+            name: loc("feat_love_name"),
+            desc: loc("feat_love_desc"),
+            flair: loc("feat_love_flair")
+        },
+        leprechaun: {
+            name: loc("feat_leprechaun_name"),
+            desc: loc("feat_leprechaun_desc"),
+            flair: loc("feat_leprechaun_flair")
+        },
+        easter: {
+            name: loc("feat_easter_name"),
+            desc: loc("feat_easter_desc"),
+            flair: loc("feat_easter_flair")
+        },
+        egghunt: {
+            name: loc("feat_egghunt_name"),
+            desc: loc("feat_egghunt_desc"),
+            flair: loc("feat_egghunt_flair")
+        },
+        launch_day: {
+            name: loc("feat_launch_day_name"),
+            desc: loc("feat_launch_day_desc"),
+            flair: loc("feat_launch_day_flair")
+        },
+        solstice: {
+            name: loc("feat_solstice_name"),
+            desc: loc("feat_solstice_desc"),
+            flair: loc("feat_solstice_flair")
+        },
+        firework: {
+            name: loc("feat_firework_name"),
+            desc: loc("feat_firework_desc"),
+            flair: loc("feat_firework_flair")
+        },
+        halloween: {
+            name: loc("feat_boo_name"),
+            desc: loc("feat_boo_desc"),
+            flair: loc("feat_boo_flair")
+        },
+        trickortreat: {
+            name: loc("feat_trickortreat_name"),
+            desc: loc("feat_trickortreat_desc"),
+            flair: loc("feat_trickortreat_flair")
+        },
+        thanksgiving: {
+            name: loc("feat_gobble_gobble_name"),
+            desc: loc("feat_gobble_gobble_desc"),
+            flair: loc("feat_gobble_gobble_flair")
+        },
+        xmas: {
+            name: loc("feat_xmas_name"),
+            desc: loc("feat_xmas_desc"),
+            flair: loc("feat_xmas_flair")
+        },
+        fool: {
+            name: loc("feat_fool_name"),
+            desc: loc("feat_fool_desc"),
+            flair: loc("feat_fool_flair")
+        }
+    };
 
-{
-    let al = universeLevel();
-    set_alevel(al.aLvl);
-    set_ulevel(al.uLvl);
+    perkList = {
+        mastery: {
+            name: loc(`mastery`),
+            desc(){
+                let desc = '';
+                Object.keys(universe_types).forEach(function(universe){
+                    let mastery = masteryType(universe,true);
+                    if (universe === 'standard'){
+                        desc += `<span class="row"><span class="has-text-caution">${universe_types[universe].name}</span>: <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}</span></span>`;
+                    }
+                    else if (global.stats.achieve['whitehole']){
+                        desc += `<span class="row"><span class="has-text-caution">${universe_types[universe].name}</span>: <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}, ${loc('perks_mastery_universe',[`<span class="has-text-advanced">${+(mastery.u).toFixed(2)}%</span>`])}</span></span>`;
+                    }
+                });
+                return desc;
+            },
+            active(){
+                return global.genes['challenge'] && global.genes['challenge'] >= 2 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_unlocked_title`)}</span>`]),
+            ]
+        },
+        blackhole: {
+            name: loc(`achieve_blackhole_name`),
+            desc(wiki){
+                let bonus = wiki ? "5/10/15/20/25" : global.stats.achieve['blackhole'] ? global.stats.achieve.blackhole.l * 5 : 5;
+                return loc("achieve_perks_blackhole",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['blackhole'] && global.stats.achieve.blackhole.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_blackhole_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_blackhole_name`)}</span>`])
+            ]
+        },
+        trade: {
+            name: loc(`achieve_trade_name`),
+            desc(wiki){
+                let bonus1 = wiki ? "2/4/6/8/10" : global.stats.achieve['trade'] ? global.stats.achieve.trade.l * 2 : 2;
+                let bonus2 = wiki ? "1/2/3/4/5" : global.stats.achieve['trade'] ? global.stats.achieve.trade.l : 1;
+                return loc("achieve_perks_trade",[bonus1,bonus2]);
+            },
+            active(){
+                return global.stats.achieve['trade'] && global.stats.achieve.trade.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_trade_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_trade_name`)}</span>`])
+            ]
+        },
+        creator: {
+            name: loc(`achieve_creator_name`),
+            desc(wiki){
+                let bonus = wiki ? "1.5/2/2.5/3/3.5" : 1 + (global.stats.achieve['creator'] ? global.stats.achieve['creator'].l * 0.5 : 0.5);
+                return loc("achieve_perks_creator",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['creator'] && global.stats.achieve.creator.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_creator_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_creator_name`)}</span>`])
+            ]
+        },
+        mass_extinction: {
+            name: loc(`achieve_mass_extinction_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_mass_extinction");
+                    },
+                    active(){
+                        return global.stats.achieve['mass_extinction'] && global.stats.achieve['mass_extinction'].l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let rank = global.stats.achieve['mass_extinction'] ? global.stats.achieve.mass_extinction.l : 1;
+                        let bonus = wiki ? "0/50/100/150/200" : (rank - 1) * 50;
+                        return loc("achieve_perks_mass_extinction2",[bonus]);
+                    },
+                    active(){
+                        return global.stats.achieve['mass_extinction'] && global.stats.achieve.mass_extinction.l > 1 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_mass_extinction_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_mass_extinction_name`)}</span>`])
+            ]
+        },
+        doomed: {
+            name: loc(`achieve_doomed_name`),
+            desc(wiki){
+                return loc("achieve_perks_doomed");
+            },
+            active(){
+                return global.stats.portals >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_doomed_name`)}</span>`])
+            ]
+        },
+        explorer: {
+            name: loc(`achieve_explorer_name`),
+            desc(wiki){
+                let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['explorer'] ? global.stats.achieve['explorer'].l : 1;
+                return loc("achieve_perks_explorer",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['explorer'] && global.stats.achieve.explorer.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_explorer_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_explorer_name`)}</span>`])
+            ]
+        },
+        miners_dream: {
+            name: loc(`achieve_miners_dream_name`),
+            desc(wiki){
+                let numGeo = wiki ? "1/2/3/5/7" : global.stats.achieve['miners_dream'] ? global.stats.achieve['miners_dream'].l >= 4 ? global.stats.achieve['miners_dream'].l * 2 - 3 : global.stats.achieve['miners_dream'].l : 0;
+                return loc("achieve_perks_miners_dream",[numGeo]);
+            },
+            active(){
+                return global.stats.achieve['miners_dream'] && global.stats.achieve.miners_dream.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_miners_dream_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_miners_dream_name`)}</span>`])
+            ]
+        },
+        extinct_junker: {
+            name: loc(`achieve_extinct_junker_name`),
+            desc(){
+                return loc("achieve_perks_enlightened");
+            },
+            active(){
+                return global.stats.achieve['extinct_junker'] && global.stats.achieve.extinct_junker.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_extinct_junker_name`)}</span>`])
+            ]
+        },
+        joyless: {
+            name: loc(`achieve_joyless_name`),
+            desc(wiki){
+                let bonus = wiki ? "2/4/6/8/10" : global.stats.achieve['joyless'] ? global.stats.achieve['joyless'].l * 2 : 2;
+                return loc("achieve_perks_joyless",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['joyless'] && global.stats.achieve.joyless.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_joyless_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_joyless_name`)}</span>`])
+            ]
+        },
+        steelen: {
+            name: loc(`achieve_steelen_name`),
+            desc(wiki){
+                let bonus = wiki ? "2/4/6/8/10" : global.stats.achieve['steelen'] ? global.stats.achieve['steelen'].l * 2 : 2;
+                return loc("achieve_perks_steelen",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['steelen'] && global.stats.achieve.steelen.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_steelen_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_steelen_name`)}</span>`])
+            ]
+        },
+        wheelbarrow: {
+            name: loc(`achieve_wheelbarrow_name`),
+            desc(wiki){
+                let bonus = wiki ? "2/4/6/8/10" : global.stats.achieve['wheelbarrow'] ? global.stats.achieve['wheelbarrow'].l * 2 : 2;
+                return loc("achieve_perks_wheelbarrow",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['wheelbarrow'] && global.stats.achieve.wheelbarrow.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_wheelbarrow_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_wheelbarrow_name`)}</span>`])
+            ]
+        },
+        extinct_sludge: {
+            name: loc(`achieve_extinct_sludge_name`),
+            group: [
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].l * 3 : 3);
+                        return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_standard`)]);
+                    },
+                    active(){
+                        return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.l >= 1 ? true : false;
+                    },
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].h * 3 : 3);
+                        return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_heavy`)]);
+                    },
+                    active(){
+                        return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.h >= 1 ? true : false;
+                    },
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].a * 3 : 3);
+                        return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_antimatter`)]);
+                    },
+                    active(){
+                        return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.a >= 1 ? true : false;
+                    },
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].e * 3 : 3);
+                        return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_evil`)]);
+                    },
+                    active(){
+                        return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.e >= 1 ? true : false;
+                    },
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].m * 3 : 3);
+                        return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_micro`)]);
+                    },
+                    active(){
+                        return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.m >= 1 ? true : false;
+                    },
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].mg * 3 : 3);
+                        return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_magic`)]);
+                    },
+                    active(){
+                        return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.mg >= 1 ? true : false;
+                    },
+                },
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_extinct_sludge_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_universe_scale`,[`<span class="has-text-caution">${loc(`achieve_extinct_sludge_name`)}</span>`])
+            ]
+        },
+        whitehole: {
+            name: loc(`achieve_whitehole_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_whitehole");
+                    },
+                    active(){
+                        return global.stats.achieve['whitehole'] ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "5/10/15/20/25" : global.stats.achieve['whitehole'] ? global.stats.achieve['whitehole'].l * 5 : 5;
+                        return loc("achieve_perks_whitehole2",[bonus]);
+                    },
+                    active(){
+                        return global.stats.achieve['whitehole'] ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['whitehole'] ? global.stats.achieve['whitehole'].l : 1;
+                        return loc("achieve_perks_whitehole3",[bonus]);
+                    },
+                    active(){
+                        return global.stats.achieve['whitehole'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_whitehole_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_whitehole_name`)}</span>`])
+            ]
+        },
+        heavyweight: {
+            name: loc(`achieve_heavyweight_name`),
+            desc(wiki){
+                let bonus = wiki ? "4/8/12/16/20" : global.stats.achieve['heavyweight'] ? global.stats.achieve['heavyweight'].l * 4 : 4;
+                return loc("achieve_perks_heavyweight",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['heavyweight'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_heavyweight_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_heavyweight_name`)}</span>`])
+            ]
+        },
+        dissipated: {
+            name: loc(`achieve_dissipated_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_dissipated1",[1]);
+                    },
+                    active(){
+                        return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "1/2" : global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 5 ? 2 : 1;
+                        return loc("achieve_perks_dissipated2",[bonus]);
+                    },
+                    active(){
+                        return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_dissipated3",[1]);
+                    },
+                    active(){
+                        return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_dissipated4",[1]);
+                    },
+                    active(){
+                        return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 4 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_dissipated_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_dissipated_name`)}</span>`])
+            ]
+        },
+        banana: {
+            name: loc(`achieve_banana_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_banana1",[50]);
+                    },
+                    active(){
+                        return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_banana2",[1]);
+                    },
+                    active(){
+                        return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_banana3",[10]);
+                    },
+                    active(){
+                        return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_banana4",[3]);
+                    },
+                    active(){
+                        return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 4 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_banana5",[0.01]);
+                    },
+                    active(){
+                        return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 5 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_banana_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_task`,[`<span class="has-text-caution">${loc(`achieve_banana_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_task_num`,[1,`<span class="has-text-${global.stats.banana.b1.l ? `success` : `danger`}">${loc(`wiki_achieve_banana1`)}</span>`]),
+                loc(`wiki_perks_achievement_note_task_num`,[2,`<span class="has-text-${global.stats.banana.b2.l ? `success` : `danger`}">${loc(`wiki_achieve_banana2`)}</span>`]),
+                loc(`wiki_perks_achievement_note_task_num`,[3,`<span class="has-text-${global.stats.banana.b3.l ? `success` : `danger`}">${loc(`wiki_achieve_banana3`)}</span>`]),
+                loc(`wiki_perks_achievement_note_task_num`,[4,`<span class="has-text-${global.stats.banana.b4.l ? `success` : `danger`}">${loc(`wiki_achieve_banana4`,[500])}</span>`]),
+                loc(`wiki_perks_achievement_note_task_num`,[5,`<span class="has-text-${global.stats.banana.b5.l ? `success` : `danger`}">${loc(`wiki_achieve_banana5`,[50])}</span>`])
+            ]
+        },
+        anarchist: {
+            name: loc(`achieve_anarchist_name`),
+            desc(wiki){
+                let bonus = wiki ? "10/20/30/40/50" : global.stats.achieve['anarchist'] ? global.stats.achieve['anarchist'].l * 10 : 10;
+                return loc("achieve_perks_anarchist",[bonus]);
+            },
+            active(){
+                return global.stats.achieve['anarchist'] && global.stats.achieve['anarchist'].l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_anarchist_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_anarchist_name`)}</span>`])
+            ]
+        },
+        ascended: {
+            name: loc(`achieve_ascended_name`),
+            group: [
+                {
+                    desc(wiki){
+                        let genes;
+                        if (wiki){
+                            genes = "1-30";
+                        }
+                        else {
+                            genes = 0;
+                            if (global.stats.achieve['ascended']){
+                                for (let i=0; i<universe_affixes.length; i++){
+                                    if (global.stats.achieve.ascended.hasOwnProperty(universe_affixes[i])){
+                                        genes += global.stats.achieve.ascended[universe_affixes[i]];
+                                    }
+                                }
+                            }
+                        }
+                        return loc("achieve_perks_ascended1",[genes]);
+                    },
+                    active(){
+                        return global.stats.achieve['ascended'] && global.stats.achieve['ascended'].l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_ascended2",[harmonyEffect()]);
+                    },
+                    active(){
+                        return global.stats.achieve['ascended'] && global.stats.achieve['ascended'][universeAffix()] >= 1 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_ascended_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_ascended_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_universe`,[`<span class="has-text-caution">${loc(`achieve_ascended_name`)}</span>`])
+            ]
+        },
+        technophobe: {
+            name: loc(`achieve_technophobe_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_technophobe1",[25]);
+                    },
+                    active(){
+                        return global.stats.achieve['technophobe'] && global.stats.achieve['technophobe'].l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let bonus;
+                        if (wiki){
+                            bonus = "10/25/30/35/40/45/50";
+                        }
+                        else {
+                            bonus = global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 4 ? 25 : 10;
+                            for (let i=1; i<universe_affixes.length; i++){
+                                if (global.stats.achieve['technophobe'] && global.stats.achieve.technophobe[universe_affixes[i]] && global.stats.achieve.technophobe[universe_affixes[i]] >= 5){
+                                    bonus += 5;
+                                }
+                            }
+                        }
+                        return loc("achieve_perks_technophobe2",[bonus]);
+                    },
+                    active(){
+                        return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let gems;
+                        if (wiki){
+                            gems = "1/2/3/4/5/6";
+                        }
+                        else {
+                            gems = 1;
+                            for (let i=1; i<universe_affixes.length; i++){
+                                if (global.stats.achieve['technophobe'] && global.stats.achieve.technophobe[universe_affixes[i]] && global.stats.achieve.technophobe[universe_affixes[i]] >= 5){
+                                    gems += 1;
+                                }
+                            }
+                        }
+                        return wiki || gems > 1 ? loc("achieve_perks_technophobe3a",[gems]) : loc("achieve_perks_technophobe3",[gems]);
+                    },
+                    active(){
+                        return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_technophobe4",[10]);
+                    },
+                    active(){
+                        return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 5 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['technophobe'] ? global.stats.achieve.technophobe.l : 0;
+                        return loc("achieve_perks_technophobe5",[bonus]);
+                    },
+                    active(){
+                        return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 1 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_technophobe_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_technophobe_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_universe`,[`<span class="has-text-caution">${loc(`achieve_technophobe_name`)}</span>`])
+            ]
+        },
+        iron_will: {
+            name: loc(`achieve_iron_will_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_iron_will1",[0.15]);
+                    },
+                    active(){
+                        return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_iron_will2",[10]);
+                    },
+                    active(){
+                        return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_iron_will3",[6]);
+                    },
+                    active(){
+                        return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_iron_will4",[1]);
+                    },
+                    active(){
+                        return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 4 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_iron_will5");
+                    },
+                    active(){
+                        return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 5 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_iron_will_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_ironwill`,[`<span class="has-text-caution">${loc(`evo_challenge_cataclysm`)}</span>`]),
+                loc(`wiki_perks_achievement_note_ironwill2`,[1,`<span class="has-text-caution">${loc(`space_red_ziggurat_title`)}</span>`]),
+                loc(`wiki_perks_achievement_note_ironwill3`,[2,`<span class="has-text-caution">${loc(`tech_elerium_mining`)}</span>`]),
+                loc(`wiki_perks_achievement_note_ironwill3`,[3,`<span class="has-text-caution">${loc(`tech_lasers`)}</span>`]),
+                loc(`wiki_perks_achievement_note_ironwill3`,[4,`<span class="has-text-caution">${loc(`tech_generational_ship`)}</span>`]),
+                loc(`wiki_perks_achievement_note_ironwill4`,[5,`<span class="has-text-caution">${loc(`wiki_resets_bioseed`)}</span>`])
+            ]
+        },
+        failed_history: {
+            name: loc(`achieve_failed_history_name`),
+            desc(){
+                return loc("achieve_perks_failed_history",[2]);
+            },
+            active(){
+                return global.stats.achieve['failed_history'] && global.stats.achieve.failed_history.l >= 5 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_failed_history_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_failed_history`,[`<span class="has-text-caution">${loc(`evo_challenge_cataclysm`)}</span>`])
+            ]
+        },
+        lamentis: {
+            name: loc(`achieve_lamentis_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_lamentis1",[`10%`]);
+                    },
+                    active(){
+                        return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_lamentis2",[`10%`]);
+                    },
+                    active(){
+                        return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_lamentis3",[`10%`]);
+                    },
+                    active(){
+                        return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_lamentis4");
+                    },
+                    active(){
+                        return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 4 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_lamentis5");
+                    },
+                    active(){
+                        return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 5 ? true : false;
+                    }
+                },
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_lamentis_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_lamentis_name`)}</span>`])
+            ]
+        },
+        gladiator: {
+            name: loc(`achieve_gladiator_name`),
+            desc(wiki){
+                let mech = wiki ? "20/40/60/80/100" : global.stats.achieve['gladiator'] ? global.stats.achieve.gladiator.l * 20 : 20;
+                return loc("achieve_perks_gladiator",[mech]);
+            },
+            active(){
+                return global.stats.achieve['gladiator'] && global.stats.achieve.gladiator.l >= 1 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_gladiator_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_gladiator_name`)}</span>`])
+            ]
+        },
+        pathfinder: {
+            name: loc(`achieve_pathfinder_name`),
+            group: [
+                {
+                    desc(){
+                        return loc("achieve_perks_pathfinder1",[10]);
+                    },
+                    active(){
+                        return global.stats.achieve['pathfinder'] && global.stats.achieve.pathfinder.l >= 1 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_pathfinder2",[10]);
+                    },
+                    active(){
+                        return global.stats.achieve['pathfinder'] && global.stats.achieve.pathfinder.l >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("achieve_perks_pathfinder3");
+                    },
+                    active(){
+                        return global.stats.achieve['pathfinder'] && global.stats.achieve.pathfinder.l >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("unavailable_content");
+                    },
+                    active(){
+                        return false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("unavailable_content");
+                    },
+                    active(){
+                        return false;
+                    }
+                },
+            ],
+            notes: [
+                loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_pathfinder_name`)}</span>`]),
+                loc(`wiki_perks_achievement_note_pathfinder`,[`<span class="has-text-caution">${loc(`evo_challenge_truepath`)}</span>`]),
+                loc(`wiki_perks_achievement_note_pathfinder_reset`,[`<span class="has-text-${global.stats.achieve['ashanddust'] ? 'success' : 'danger'}">${loc(`wiki_resets_mad`)}</span>`]),
+                loc(`wiki_perks_achievement_note_pathfinder_reset`,[`<span class="has-text-${global.stats.achieve['exodus'] ? 'success' : 'danger'}">${loc(`wiki_resets_bioseed`)}</span>`]),
+                loc(`wiki_perks_achievement_note_pathfinder_reset`,[`<span class="has-text-${global.stats.achieve['obsolete'] ? 'success' : 'danger'}">${loc(`wiki_resets_ai`)}</span>`]),
+            ]
+        },
+        creep: {
+            name: loc(`wiki_arpa_crispr_creep`),
+            desc(wiki){
+                let bonus = wiki ? "0.01/0.02/0.03/0.04/0.05" : global.genes['creep'] ? global.genes.creep * 0.01 : 0;
+                return loc("arpa_perks_creep",[bonus]);
+            },
+            active(){
+                return global.genes['creep'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_genetic_memory_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_animus_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_divine_remembrance_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_divine_proportion_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_genetic_repository_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        store: {
+            name: loc(`wiki_arpa_crispr_store`),
+            desc(wiki){
+                let psb = wiki ? "0.04/0.06/0.08" : global.genes['store'] && global.genes.store > 1 ? (global.genes.store === 2 ? 0.06 : 0.08) : 0.04;
+                return loc(global.genes['store'] && global.genes.store >= 4 ? "arpa_perks_store2" : "arpa_perks_store1",[psb]);
+            },
+            active(){
+                return global.genes['store'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_spatial_reasoning_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_spatial_superiority_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_spatial_supremacy_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_dimensional_warping_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        evolve: {
+            name: loc(`wiki_arpa_crispr_evolve`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_perks_evolve");
+                    },
+                    active(){
+                        return global.genes['evolve'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_recombination_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_homologous_recombination_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_genetic_reshuffling_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 4 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_recombinant_dna_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 5 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_chimeric_dna_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 6 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_molecular_cloning_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 7 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_transgenes_desc");
+                    },
+                    active(){
+                        return global.genes['evolve'] && global.genes.evolve >= 8 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_morphogenesis_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_recombination_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_homologous_recombination_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_genetic_reshuffling_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_recombinant_dna_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_chimeric_dna_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_molecular_cloning_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_transgenes_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        birth: {
+            name: loc(`wiki_arpa_crispr_birth`),
+            desc(){
+                return loc("arpa_perks_birth");
+            },
+            active(){
+                return global.genes['birth'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_replication_title`)}</span>`]),
+            ]
+        },
+        enhance: {
+            name: loc(`wiki_arpa_crispr_enhance`),
+            desc(){
+                return loc("arpa_perks_enhance");
+            },
+            active(){
+                return global.genes['enhance'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_enhanced_muscle_fiber_title`)}</span>`])
+            ]
+        },
+        crafty: {
+            name: loc(`wiki_arpa_crispr_crafty`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_genepool_artificer_desc");
+                    },
+                    active(){
+                        return global.genes['crafty'] ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let bonus = wiki ? "50/100" : global.genes['crafty'] && global.genes.crafty >= 3 ? 100 : 50;
+                        return loc("arpa_genepool_crafting_desc",[bonus]);
+                    },
+                    active(){
+                        return global.genes['crafty'] && global.genes.crafty >= 2 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_artificer_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_detail_oriented_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_rigorous_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        governor: {
+            name: loc(`wiki_arpa_crispr_governor`),
+            desc(){
+                return loc("arpa_perks_governor");
+            },
+            active(){
+                return global.genes['governor'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_governance_title`)}</span>`])
+            ]
+        },
+        synthesis: {
+            name: loc(`wiki_arpa_crispr_synthesis`),
+            desc(wiki){
+                let base = wiki ? "2/3/4" : global.genes['synthesis'] && global.genes['synthesis'] >= 2 ? (global.genes['synthesis'] >= 3 ? 4 : 3) : 2;
+                let auto = wiki ? "10/25/50" : global.genes['synthesis'] && global.genes['synthesis'] >= 2 ? (global.genes['synthesis'] >= 3 ? 50 : 25) : 10;
+                return loc("arpa_genepool_synthesis_desc",[base,auto]);
+            },
+            active(){
+                return global.genes['synthesis'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_synthesis_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_karyokinesis_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_cytokinesis_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        challenge: {
+            name: loc(`wiki_arpa_crispr_challenge`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_perks_challenge");
+                    },
+                    active(){
+                        return global.genes['challenge'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_unlocked_desc");
+                    },
+                    active(){
+                        return global.genes['challenge'] && global.genes.challenge >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_challenge2",[
+                            wiki ? "60/80" : global.genes['challenge'] && global.genes['challenge'] >= 4 ? 80 : 60,
+                            wiki ? "60/40" : global.genes['challenge'] && global.genes['challenge'] >= 4 ? 40 : 60
+                        ]);
+                    },
+                    active(){
+                        return global.genes['challenge'] && global.genes.challenge >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_perks_challenge3");
+                    },
+                    active(){
+                        return global.genes['challenge'] && global.genes.challenge >= 5 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_hardened_genes_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_unlocked_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_universal_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_standard_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_mastered_title`)}</span>`
+                    ].join(', ')
+                ]),
+                loc(`wiki_perks_crispr_note_challenge`,[loc(`arpa_genepool_universal_title`),loc(`arpa_genepool_standard_title`)])
+            ]
+        },
+        ancients: {
+            name: loc(`wiki_arpa_crispr_ancients`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_perks_ancients");
+                    },
+                    active(){
+                        return global.genes['ancients'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return global.genes['ancients'] && global.genes.ancients >= 4 ? loc("arpa_perks_ancients3") : loc("arpa_perks_ancients2");
+                    },
+                    active(){
+                        return global.genes['ancients'] && global.genes.ancients >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_ancients4",[wiki ? "25/50" : global.genes['ancients'] && global.genes.ancients >= 5 ? 50 : 25]);
+                    },
+                    active(){
+                        return global.genes['ancients'] && global.genes.ancients >= 3 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_ancients_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_faith_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_devotion_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_acolyte_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_conviction_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        trader: {
+            name: loc(`wiki_arpa_crispr_trader`),
+            desc(){
+                return loc("arpa_genepool_negotiator_desc");
+            },
+            active(){
+                return global.genes['trader'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_negotiator_title`)}</span>`])
+            ]
+        },
+        transcendence: {
+            name: loc(`wiki_arpa_crispr_transcendence`),
+            desc(){
+                return loc("arpa_genepool_transcendence_desc");
+            },
+            active(){
+                return global.genes['transcendence'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_transcendence_title`)}</span>`])
+            ]
+        },
+        queue: {
+            name: loc(`wiki_arpa_crispr_queue`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_genepool_geographer_desc");
+                    },
+                    active(){
+                        return global.genes['queue'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_architect_desc");
+                    },
+                    active(){
+                        return global.genes['queue'] && global.genes.queue >= 2 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_geographer_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_architect_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        plasma: {
+            name: loc(`wiki_arpa_crispr_plasma`),
+            desc(wiki){
+                let plasmid_cap = wiki ? "3/5" : global.genes['plasma'] >= 2 ? 5 : 3;
+                return loc('arpa_genepool_mitosis_desc',[plasmid_cap]);
+            },
+            active(){
+                return global.genes['plasma'] ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_mitosis_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_metaphase_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        mutation: {
+            name: loc(`wiki_arpa_crispr_mutation`),
+            group: [
+                {
+                    desc(){
+                        return global.genes['mutation'] && global.genes.mutation > 1 ? loc("arpa_perks_mutation2") : loc("arpa_perks_mutation1");
+                    },
+                    active(){
+                        return global.genes['mutation'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_perks_mutation3");
+                    },
+                    active(){
+                        return global.genes['mutation'] && global.genes.mutation >= 3 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_mutation_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_transformation_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_metamorphosis_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        bleed: {
+            name: loc(`wiki_arpa_crispr_bleed`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_genepool_bleeding_effect_desc",[2.5]);
+                    },
+                    active(){
+                        return global.genes['bleed'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_synchronicity_desc",[25]);
+                    },
+                    active(){
+                        return global.genes['bleed'] && global.genes.bleed >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_astral_awareness_desc");
+                    },
+                    active(){
+                        return global.genes['bleed'] && global.genes.bleed >= 3 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_bleeding_effect_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_synchronicity_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_astral_awareness_title`)}</span>`
+                    ].join(', ')
+                ]),
+                loc(`wiki_perks_crispr_note_bleed`,[`<span class="has-text-caution">${loc(`arpa_genepool_bleeding_effect_title`)}</span>`]),
+            ]
+        },
+        blood: {
+            name: loc(`wiki_arpa_crispr_blood`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_genepool_blood_remembrance_desc");
+                    },
+                    active(){
+                        return global.genes['blood'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_blood_sacrifice_desc");
+                    },
+                    active(){
+                        return global.genes['blood'] && global.genes.blood >= 2 ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_genepool_essence_absorber_desc");
+                    },
+                    active(){
+                        return global.genes['blood'] && global.genes.blood >= 3 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_blood_remembrance_title`)}</span>`]),
+                loc(`wiki_perks_crispr_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_genepool_blood_sacrifice_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_genepool_essence_absorber_title`)}</span>`
+                    ].join(', ')
+                ]),
+                loc(`wiki_perks_crispr_note_blood`,[loc(`arpa_genepool_blood_remembrance_title`)])
+            ]
+        },
+        spire: {
+            name: loc(`wiki_arpa_blood_spire`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_blood_purify_desc");
+                    },
+                    active(){
+                        return global.blood['spire'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_blood_chum_desc");
+                    },
+                    active(){
+                        return global.blood['spire'] && global.blood.spire >= 2 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_purify_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_blood_chum_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        lust: {
+            name: loc(`wiki_arpa_blood_lust`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_lust",[wiki ? 0.2 : 0.2 * (global.blood['lust'] ? global.blood['lust'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['lust'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_lust_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_lust_title`)])
+            ]
+        },
+        illuminate: {
+            name: loc(`wiki_arpa_blood_illuminate`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_illuminate",[wiki ? 0.01 : 0.01 * (global.blood['illuminate'] ? global.blood['illuminate'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['illuminate'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_illuminate_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_illuminate_title`)])
+            ]
+        },
+        greed: {
+            name: loc(`wiki_arpa_blood_greed`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_greed",[wiki ? 1 : 1 * (global.blood['greed'] ? global.blood['greed'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['greed'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_greed_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_greed_title`)])
+            ]
+        },
+        hoarder: {
+            name: loc(`wiki_arpa_blood_hoarder`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_hoarder",[wiki ? 1 : 1 * (global.blood['hoarder'] ? global.blood['hoarder'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['hoarder'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_hoarder_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_hoarder_title`)])
+            ]
+        },
+        artisan: {
+            name: loc(`wiki_arpa_blood_artisan`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_artisan",[wiki ? 1 : 1 * (global.blood['artisan'] ? global.blood['artisan'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['artisan'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_artisan_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_artisan_title`)])
+            ]
+        },
+        attract: {
+            name: loc(`wiki_arpa_blood_attract`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_attract",[wiki ? 5 : 5 * (global.blood['attract'] ? global.blood['attract'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['attract'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_attract_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_attract_title`)])
+            ]
+        },
+        wrath: {
+            name: loc(`wiki_arpa_blood_wrath`),
+            group: [
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_wrath",[wiki ? 5 : 5 * (global.blood['wrath'] ? global.blood['wrath'] : 1)]);
+                    },
+                    active(){
+                        return global.blood['wrath'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_wrath_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_wrath_title`)])
+            ]
+        },
+        prepared: {
+            name: loc(`wiki_arpa_blood_prepared`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_blood_prepared_desc");
+                    },
+                    active(){
+                        return global.blood['prepared'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_blood_compact_desc");
+                    },
+                    active(){
+                        return global.blood['prepared'] && global.blood.prepared >= 2 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_prepared_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_blood_compact_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        unbound: {
+            name: loc(`wiki_arpa_blood_unbound`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_blood_unbound_desc");
+                    },
+                    active(){
+                        return global.blood['unbound'] ? true : false;
+                    }
+                },
+                {
+                    desc(){
+                        return loc("arpa_blood_shadow_war_desc");
+                    },
+                    active(){
+                        return global.blood['unbound'] && global.blood.unbound >= 3 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        return loc("arpa_perks_unbound_resist",[wiki ? "10/5" : global.blood['unbound'] && global.blood.unbound >= 4 ? 5 : 10]);
+                    },
+                    active(){
+                        return global.blood['unbound'] && global.blood.unbound >= 2 ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_unbound_title`)}</span>`]),
+                loc(`wiki_perks_blood_note_upgrade`,[
+                    [
+                        `<span class="has-text-caution">${loc(`arpa_blood_unbound_resistance_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_blood_shadow_war_title`)}</span>`,
+                        `<span class="has-text-caution">${loc(`arpa_blood_unbound_immunity_title`)}</span>`
+                    ].join(', ')
+                ])
+            ]
+        },
+        aware: {
+            name: loc(`wiki_arpa_blood_aware`),
+            group: [
+                {
+                    desc(){
+                        return loc("arpa_blood_blood_aware_desc");
+                    },
+                    active(){
+                        return global.blood['aware'] ? true : false;
+                    }
+                }
+            ],
+            notes: [
+                loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_blood_aware_title`)}</span>`])
+            ]
+        },
+        harmonic: {
+            name: loc(`harmonic`),
+            group: [
+                {
+                    desc(wiki){
+                        let harmonic = calcPillar();
+                        return loc("perks_harmonic",[wiki ? `1-${Object.keys(races).length + 2}` : +((harmonic[0] - 1) * 100).toFixed(0), wiki ? `2-${(Object.keys(races).length + 2) * 2}` : +((harmonic[1] - 1) * 100).toFixed(0)]);
+                    },
+                    active(){
+                        let harmonic = calcPillar();
+                        return global['pillars'] && harmonic[0] > 1 ? true : false;
+                    }
+                },
+                {
+                    desc(wiki){
+                        let harmonic = calcPillar();
+                        return loc("perks_harmonic2",[loc("portal_west_tower"), loc("portal_east_tower"), wiki ? `12-${(Object.keys(races).length - 1) * 12}` : +(Object.keys(global.pillars).length * 12)]);
+                    },
+                    active(){
+                        let harmonic = calcPillar();
+                        return global['pillars'] && harmonic[0] > 1 ? true : false;
+                    }
+                },
+            ],
+            notes: [
+                loc(`wiki_perks_harmonic_note1`),
+                loc(`wiki_perks_harmonic_note2`)
+            ]
+        },
+        novice: {
+            name: loc(`perk_novice`),
+            desc(wiki){
+                let rank = global.stats.feat['novice'] && global.stats.achieve['apocalypse'] && global.stats.achieve.apocalypse.l > 0 ? Math.min(global.stats.achieve.apocalypse.l,global.stats.feat['novice']) : 1;
+                let rna = wiki ? "0.5/1/1.5/2/2.5" : rank / 2;
+                let dna = wiki ? "0.25/0.5/0.75/1/1.25" : rank / 4;
+                return `<div>${loc("achieve_perks_novice",[rna,dna])}</div><div>${loc("achieve_perks_novice2")}</div>`;
+            },
+            active(){
+                return global.stats.feat['novice'] && global.stats.mad > 0 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_progress_note1`,[10,loc(`wiki_resets_mad`)]),
+                loc(`wiki_perks_progress_note2`)
+            ]
+        },
+        journeyman: {
+            name: loc(`perk_journeyman`),
+            desc(wiki){
+                let rank = global.stats.feat['journeyman'] && global.stats.achieve['seeder'] && global.stats.achieve.seeder.l > 0 ? Math.min(global.stats.achieve.seeder.l,global.stats.feat['journeyman']) : 1;
+                if (wiki || rank > 1){
+                    let rqueue = wiki ? "1/2/3" : rank >= 3 ? (rank >= 5 ? 3 : 2) : 1;
+                    let queue = wiki ? "1/2" : rank >= 4 ? 2 : 1;
+                    return `<div>${loc("achieve_perks_journeyman2",[rqueue,queue])}</div><div>${loc("achieve_perks_journeyman3")}</div>`;
+                }
+                else {
+                    return `<div>${loc("achieve_perks_journeyman1",[1])}</div><div>${loc("achieve_perks_journeyman3")}</div>`;
+                }
+            },
+            active(){
+                return global.stats.feat['journeyman'] && global.stats.bioseed > 0 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_progress_note1`,[25,loc(`wiki_resets_bioseed`)]),
+                loc(`wiki_perks_progress_note2`)
+            ]
+        },
+        adept: {
+            name: loc(`perk_adept`),
+            desc(wiki){
+                let rank = global.stats.feat['adept'] && global.stats.achieve['whitehole'] && global.stats.achieve.whitehole.l > 0 ? Math.min(global.stats.achieve.whitehole.l,global.stats.feat['adept']) : 1;
+                let res = wiki ? "100/200/300/400/500" : rank * 100;
+                let cap = wiki ? "60/120/180/240/300" : rank * 60;
+                return loc("achieve_perks_adept",[res,cap]);
+            },
+            active(){
+                return global.stats.feat['adept'] && global.stats.achieve['whitehole'] && global.stats.achieve.whitehole.l > 0 ? true : false;
+            },
+            notes: [
+                loc(`wiki_perks_progress_note1`,[50,loc(`wiki_resets_blackhole`)]),
+                loc(`wiki_perks_progress_note2`)
+            ]
+        },
+    };
 }
 
 export function universeLevel(universe){
@@ -416,8 +1907,6 @@ export function drawAchieve(args){
             }
         }
     });
-    set_alevel(level);
-    set_ulevel(ulevel);
 
     if (fool && !global.stats.feat['fool']){
         let thefool = $(`<b-tooltip :label="feat('fool')" position="is-bottom" size="is-small" animated><div id="thefool" class="achievement"><span class="has-text-danger">${feats.fool.name}</span><span>${loc('feat_fool_spoof')}</span></div></b-tooltip>`);
@@ -600,7 +2089,7 @@ export function checkAchievements(){
         let genus = {};
         let rCnt = 0;
         let equilRank = 5;
-        Object.keys(global.pillars).forEach(function(race){                
+        Object.keys(global.pillars).forEach(function(race){
             if (races[race]){
                 if (race !== 'sludge'){
                     if (!genus[races[race].type] || global.pillars[race] > genus[races[race].type]){
@@ -763,7 +2252,7 @@ export function checkAchievements(){
     else if (!global.settings.boring && date.getMonth() === 11 && date.getDate() == 25){
         unlockFeat('xmas',global.race.universe === 'micro' ? true : false);
     }
-    
+
     if (!global.settings.boring && date.getMonth() === 3 && date.getDate() >= 1 && date.getDate() <= 3 && global.stats.feat.hasOwnProperty('fool') && global.stats.feat.fool > 0){
         unlockFeat('fool',global.race.universe === 'micro' ? true : false);
     }
@@ -919,1510 +2408,6 @@ function checkBigAchievementUniverse(frag, name, num, level){
         }
     }
 }
-
-export const perkList = {
-    mastery: {
-        name: loc(`mastery`),
-        desc(){
-            let desc = '';
-            Object.keys(universe_types).forEach(function(universe){
-                let mastery = masteryType(universe,true);
-                if (universe === 'standard'){
-                    desc += `<span class="row"><span class="has-text-caution">${universe_types[universe].name}</span>: <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}</span></span>`;
-                }
-                else if (global.stats.achieve['whitehole']){
-                    desc += `<span class="row"><span class="has-text-caution">${universe_types[universe].name}</span>: <span>${loc('perks_mastery_general',[`<span class="has-text-advanced">${+(mastery.g).toFixed(2)}%</span>`])}, ${loc('perks_mastery_universe',[`<span class="has-text-advanced">${+(mastery.u).toFixed(2)}%</span>`])}</span></span>`;
-                }
-            });
-            return desc;
-        },
-        active(){
-            return global.genes['challenge'] && global.genes['challenge'] >= 2 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_unlocked_title`)}</span>`]),
-        ]
-    },
-    blackhole: {
-        name: loc(`achieve_blackhole_name`),
-        desc(wiki){
-            let bonus = wiki ? "5/10/15/20/25" : global.stats.achieve['blackhole'] ? global.stats.achieve.blackhole.l * 5 : 5;
-            return loc("achieve_perks_blackhole",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['blackhole'] && global.stats.achieve.blackhole.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_blackhole_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_blackhole_name`)}</span>`])
-        ]
-    },
-    trade: {
-        name: loc(`achieve_trade_name`),
-        desc(wiki){
-            let bonus1 = wiki ? "2/4/6/8/10" : global.stats.achieve['trade'] ? global.stats.achieve.trade.l * 2 : 2;
-            let bonus2 = wiki ? "1/2/3/4/5" : global.stats.achieve['trade'] ? global.stats.achieve.trade.l : 1;
-            return loc("achieve_perks_trade",[bonus1,bonus2]);
-        },
-        active(){
-            return global.stats.achieve['trade'] && global.stats.achieve.trade.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_trade_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_trade_name`)}</span>`])
-        ]
-    },
-    creator: {
-        name: loc(`achieve_creator_name`),
-        desc(wiki){
-            let bonus = wiki ? "1.5/2/2.5/3/3.5" : 1 + (global.stats.achieve['creator'] ? global.stats.achieve['creator'].l * 0.5 : 0.5);
-            return loc("achieve_perks_creator",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['creator'] && global.stats.achieve.creator.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_creator_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_creator_name`)}</span>`])
-        ]
-    },
-    mass_extinction: {
-        name: loc(`achieve_mass_extinction_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_mass_extinction");
-                },
-                active(){
-                    return global.stats.achieve['mass_extinction'] && global.stats.achieve['mass_extinction'].l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let rank = global.stats.achieve['mass_extinction'] ? global.stats.achieve.mass_extinction.l : 1;
-                    let bonus = wiki ? "0/50/100/150/200" : (rank - 1) * 50;
-                    return loc("achieve_perks_mass_extinction2",[bonus]);
-                },
-                active(){
-                    return global.stats.achieve['mass_extinction'] && global.stats.achieve.mass_extinction.l > 1 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_mass_extinction_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_mass_extinction_name`)}</span>`])
-        ]
-    },
-    doomed: {
-        name: loc(`achieve_doomed_name`),
-        desc(wiki){
-            return loc("achieve_perks_doomed");
-        },
-        active(){
-            return global.stats.portals >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_doomed_name`)}</span>`])
-        ]
-    },
-    explorer: {
-        name: loc(`achieve_explorer_name`),
-        desc(wiki){
-            let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['explorer'] ? global.stats.achieve['explorer'].l : 1;
-            return loc("achieve_perks_explorer",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['explorer'] && global.stats.achieve.explorer.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_explorer_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_explorer_name`)}</span>`])
-        ]
-    },
-    miners_dream: {
-        name: loc(`achieve_miners_dream_name`),
-        desc(wiki){
-            let numGeo = wiki ? "1/2/3/5/7" : global.stats.achieve['miners_dream'] ? global.stats.achieve['miners_dream'].l >= 4 ? global.stats.achieve['miners_dream'].l * 2 - 3 : global.stats.achieve['miners_dream'].l : 0;
-            return loc("achieve_perks_miners_dream",[numGeo]);
-        },
-        active(){
-            return global.stats.achieve['miners_dream'] && global.stats.achieve.miners_dream.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_miners_dream_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_miners_dream_name`)}</span>`])
-        ]
-    },
-    extinct_junker: {
-        name: loc(`achieve_extinct_junker_name`),
-        desc(){
-            return loc("achieve_perks_enlightened");
-        },
-        active(){
-            return global.stats.achieve['extinct_junker'] && global.stats.achieve.extinct_junker.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_extinct_junker_name`)}</span>`])
-        ]
-    },
-    joyless: {
-        name: loc(`achieve_joyless_name`),
-        desc(wiki){
-            let bonus = wiki ? "2/4/6/8/10" : global.stats.achieve['joyless'] ? global.stats.achieve['joyless'].l * 2 : 2;
-            return loc("achieve_perks_joyless",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['joyless'] && global.stats.achieve.joyless.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_joyless_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_joyless_name`)}</span>`])
-        ]
-    },
-    steelen: {
-        name: loc(`achieve_steelen_name`),
-        desc(wiki){
-            let bonus = wiki ? "2/4/6/8/10" : global.stats.achieve['steelen'] ? global.stats.achieve['steelen'].l * 2 : 2;
-            return loc("achieve_perks_steelen",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['steelen'] && global.stats.achieve.steelen.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_steelen_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_steelen_name`)}</span>`])
-        ]
-    },
-    wheelbarrow: {
-        name: loc(`achieve_wheelbarrow_name`),
-        desc(wiki){
-            let bonus = wiki ? "2/4/6/8/10" : global.stats.achieve['wheelbarrow'] ? global.stats.achieve['wheelbarrow'].l * 2 : 2;
-            return loc("achieve_perks_wheelbarrow",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['wheelbarrow'] && global.stats.achieve.wheelbarrow.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_wheelbarrow_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_wheelbarrow_name`)}</span>`])
-        ]
-    },
-    extinct_sludge: {
-        name: loc(`achieve_extinct_sludge_name`),
-        group: [
-            {
-                desc(wiki){
-                    let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].l * 3 : 3);
-                    return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_standard`)]);
-                },
-                active(){
-                    return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.l >= 1 ? true : false;
-                },
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].h * 3 : 3);
-                    return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_heavy`)]);
-                },
-                active(){
-                    return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.h >= 1 ? true : false;
-                },
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].a * 3 : 3);
-                    return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_antimatter`)]);
-                },
-                active(){
-                    return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.a >= 1 ? true : false;
-                },
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].e * 3 : 3);
-                    return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_evil`)]);
-                },
-                active(){
-                    return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.e >= 1 ? true : false;
-                },
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].m * 3 : 3);
-                    return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_micro`)]);
-                },
-                active(){
-                    return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.m >= 1 ? true : false;
-                },
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "3/6/9/12/15" : (global.stats.achieve['extinct_sludge'] ? global.stats.achieve['extinct_sludge'].mg * 3 : 3);
-                    return loc("achieve_perks_extinct_sludge",[bonus,loc(`universe_magic`)]);
-                },
-                active(){
-                    return global.stats.achieve['extinct_sludge'] && global.stats.achieve.extinct_sludge.mg >= 1 ? true : false;
-                },
-            },
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_extinct_sludge_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_universe_scale`,[`<span class="has-text-caution">${loc(`achieve_extinct_sludge_name`)}</span>`])
-        ]
-    },
-    whitehole: {
-        name: loc(`achieve_whitehole_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_whitehole");
-                },
-                active(){
-                    return global.stats.achieve['whitehole'] ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "5/10/15/20/25" : global.stats.achieve['whitehole'] ? global.stats.achieve['whitehole'].l * 5 : 5;
-                    return loc("achieve_perks_whitehole2",[bonus]);
-                },
-                active(){
-                    return global.stats.achieve['whitehole'] ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['whitehole'] ? global.stats.achieve['whitehole'].l : 1;
-                    return loc("achieve_perks_whitehole3",[bonus]);
-                },
-                active(){
-                    return global.stats.achieve['whitehole'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_whitehole_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_whitehole_name`)}</span>`])
-        ]
-    },
-    heavyweight: {
-        name: loc(`achieve_heavyweight_name`),
-        desc(wiki){
-            let bonus = wiki ? "4/8/12/16/20" : global.stats.achieve['heavyweight'] ? global.stats.achieve['heavyweight'].l * 4 : 4;
-            return loc("achieve_perks_heavyweight",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['heavyweight'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_heavyweight_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_heavyweight_name`)}</span>`])
-        ]
-    },
-    dissipated: {
-        name: loc(`achieve_dissipated_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_dissipated1",[1]);
-                },
-                active(){
-                    return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "1/2" : global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 5 ? 2 : 1;
-                    return loc("achieve_perks_dissipated2",[bonus]);
-                },
-                active(){
-                    return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_dissipated3",[1]);
-                },
-                active(){
-                    return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_dissipated4",[1]);
-                },
-                active(){
-                    return global.stats.achieve['dissipated'] && global.stats.achieve['dissipated'].l >= 4 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_dissipated_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_dissipated_name`)}</span>`])
-        ]
-    },
-    banana: {
-        name: loc(`achieve_banana_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_banana1",[50]);
-                },
-                active(){
-                    return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_banana2",[1]);
-                },
-                active(){
-                    return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_banana3",[10]);
-                },
-                active(){
-                    return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_banana4",[3]);
-                },
-                active(){
-                    return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 4 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_banana5",[0.01]);
-                },
-                active(){
-                    return global.stats.achieve['banana'] && global.stats.achieve.banana.l >= 5 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_banana_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_task`,[`<span class="has-text-caution">${loc(`achieve_banana_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_task_num`,[1,`<span class="has-text-${global.stats.banana.b1.l ? `success` : `danger`}">${loc(`wiki_achieve_banana1`)}</span>`]),
-            loc(`wiki_perks_achievement_note_task_num`,[2,`<span class="has-text-${global.stats.banana.b2.l ? `success` : `danger`}">${loc(`wiki_achieve_banana2`)}</span>`]),
-            loc(`wiki_perks_achievement_note_task_num`,[3,`<span class="has-text-${global.stats.banana.b3.l ? `success` : `danger`}">${loc(`wiki_achieve_banana3`)}</span>`]),
-            loc(`wiki_perks_achievement_note_task_num`,[4,`<span class="has-text-${global.stats.banana.b4.l ? `success` : `danger`}">${loc(`wiki_achieve_banana4`,[500])}</span>`]),
-            loc(`wiki_perks_achievement_note_task_num`,[5,`<span class="has-text-${global.stats.banana.b5.l ? `success` : `danger`}">${loc(`wiki_achieve_banana5`,[50])}</span>`])
-        ]
-    },
-    anarchist: {
-        name: loc(`achieve_anarchist_name`),
-        desc(wiki){
-            let bonus = wiki ? "10/20/30/40/50" : global.stats.achieve['anarchist'] ? global.stats.achieve['anarchist'].l * 10 : 10;
-            return loc("achieve_perks_anarchist",[bonus]);
-        },
-        active(){
-            return global.stats.achieve['anarchist'] && global.stats.achieve['anarchist'].l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_anarchist_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_anarchist_name`)}</span>`])
-        ]
-    },
-    ascended: {
-        name: loc(`achieve_ascended_name`),
-        group: [
-            {
-                desc(wiki){
-                    let genes;
-                    if (wiki){
-                        genes = "1-30";
-                    }
-                    else {
-                        genes = 0;
-                        if (global.stats.achieve['ascended']){
-                            for (let i=0; i<universe_affixes.length; i++){
-                                if (global.stats.achieve.ascended.hasOwnProperty(universe_affixes[i])){
-                                    genes += global.stats.achieve.ascended[universe_affixes[i]];
-                                }
-                            }
-                        }
-                    }
-                    return loc("achieve_perks_ascended1",[genes]);
-                },
-                active(){
-                    return global.stats.achieve['ascended'] && global.stats.achieve['ascended'].l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_ascended2",[harmonyEffect()]);
-                },
-                active(){
-                    return global.stats.achieve['ascended'] && global.stats.achieve['ascended'][universeAffix()] >= 1 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_ascended_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_ascended_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_universe`,[`<span class="has-text-caution">${loc(`achieve_ascended_name`)}</span>`])
-        ]
-    },
-    technophobe: {
-        name: loc(`achieve_technophobe_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_technophobe1",[25]);
-                },
-                active(){
-                    return global.stats.achieve['technophobe'] && global.stats.achieve['technophobe'].l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let bonus;
-                    if (wiki){
-                        bonus = "10/25/30/35/40/45/50";
-                    }
-                    else {
-                        bonus = global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 4 ? 25 : 10;
-                        for (let i=1; i<universe_affixes.length; i++){
-                            if (global.stats.achieve['technophobe'] && global.stats.achieve.technophobe[universe_affixes[i]] && global.stats.achieve.technophobe[universe_affixes[i]] >= 5){
-                                bonus += 5;
-                            }
-                        }
-                    }
-                    return loc("achieve_perks_technophobe2",[bonus]);
-                },
-                active(){
-                    return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 2 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let gems;
-                    if (wiki){
-                        gems = "1/2/3/4/5/6";
-                    }
-                    else {
-                        gems = 1;
-                        for (let i=1; i<universe_affixes.length; i++){
-                            if (global.stats.achieve['technophobe'] && global.stats.achieve.technophobe[universe_affixes[i]] && global.stats.achieve.technophobe[universe_affixes[i]] >= 5){
-                                gems += 1;
-                            }
-                        }
-                    }
-                    return wiki || gems > 1 ? loc("achieve_perks_technophobe3a",[gems]) : loc("achieve_perks_technophobe3",[gems]);
-                },
-                active(){
-                    return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_technophobe4",[10]);
-                },
-                active(){
-                    return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 5 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "1/2/3/4/5" : global.stats.achieve['technophobe'] ? global.stats.achieve.technophobe.l : 0;
-                    return loc("achieve_perks_technophobe5",[bonus]);
-                },
-                active(){
-                    return global.stats.achieve['technophobe'] && global.stats.achieve.technophobe.l >= 1 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_technophobe_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_technophobe_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_universe`,[`<span class="has-text-caution">${loc(`achieve_technophobe_name`)}</span>`])
-        ]
-    },
-    iron_will: {
-        name: loc(`achieve_iron_will_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_iron_will1",[0.15]);
-                },
-                active(){
-                    return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_iron_will2",[10]);
-                },
-                active(){
-                    return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_iron_will3",[6]);
-                },
-                active(){
-                    return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_iron_will4",[1]);
-                },
-                active(){
-                    return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 4 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_iron_will5");
-                },
-                active(){
-                    return global.stats.achieve['iron_will'] && global.stats.achieve.iron_will.l >= 5 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_iron_will_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_ironwill`,[`<span class="has-text-caution">${loc(`evo_challenge_cataclysm`)}</span>`]),
-            loc(`wiki_perks_achievement_note_ironwill2`,[1,`<span class="has-text-caution">${loc(`space_red_ziggurat_title`)}</span>`]),
-            loc(`wiki_perks_achievement_note_ironwill3`,[2,`<span class="has-text-caution">${loc(`tech_elerium_mining`)}</span>`]),
-            loc(`wiki_perks_achievement_note_ironwill3`,[3,`<span class="has-text-caution">${loc(`tech_lasers`)}</span>`]),
-            loc(`wiki_perks_achievement_note_ironwill3`,[4,`<span class="has-text-caution">${loc(`tech_generational_ship`)}</span>`]),
-            loc(`wiki_perks_achievement_note_ironwill4`,[5,`<span class="has-text-caution">${loc(`wiki_resets_bioseed`)}</span>`])
-        ]
-    },
-    failed_history: {
-        name: loc(`achieve_failed_history_name`),
-        desc(){
-            return loc("achieve_perks_failed_history",[2]);
-        },
-        active(){
-            return global.stats.achieve['failed_history'] && global.stats.achieve.failed_history.l >= 5 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_failed_history_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_failed_history`,[`<span class="has-text-caution">${loc(`evo_challenge_cataclysm`)}</span>`])
-        ]
-    },
-    lamentis: {
-        name: loc(`achieve_lamentis_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_lamentis1",[`10%`]);
-                },
-                active(){
-                    return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_lamentis2",[`10%`]);
-                },
-                active(){
-                    return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_lamentis3",[`10%`]);
-                },
-                active(){
-                    return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_lamentis4");
-                },
-                active(){
-                    return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 4 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_lamentis5");
-                },
-                active(){
-                    return global.stats.achieve['lamentis'] && global.stats.achieve.lamentis.l >= 5 ? true : false;
-                }
-            },
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_lamentis_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_lamentis_name`)}</span>`])
-        ]
-    },
-    gladiator: {
-        name: loc(`achieve_gladiator_name`),
-        desc(wiki){
-            let mech = wiki ? "20/40/60/80/100" : global.stats.achieve['gladiator'] ? global.stats.achieve.gladiator.l * 20 : 20;
-            return loc("achieve_perks_gladiator",[mech]);
-        },
-        active(){
-            return global.stats.achieve['gladiator'] && global.stats.achieve.gladiator.l >= 1 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_gladiator_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_scale`,[`<span class="has-text-caution">${loc(`achieve_gladiator_name`)}</span>`])
-        ]
-    },
-    pathfinder: {
-        name: loc(`achieve_pathfinder_name`),
-        group: [
-            {
-                desc(){
-                    return loc("achieve_perks_pathfinder1",[10]);
-                },
-                active(){
-                    return global.stats.achieve['pathfinder'] && global.stats.achieve.pathfinder.l >= 1 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_pathfinder2",[10]);
-                },
-                active(){
-                    return global.stats.achieve['pathfinder'] && global.stats.achieve.pathfinder.l >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("achieve_perks_pathfinder3");
-                },
-                active(){
-                    return global.stats.achieve['pathfinder'] && global.stats.achieve.pathfinder.l >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("unavailable_content");
-                },
-                active(){
-                    return false;
-                }
-            },
-            {
-                desc(){
-                    return loc("unavailable_content");
-                },
-                active(){
-                    return false;
-                }
-            },
-        ],
-        notes: [
-            loc(`wiki_perks_achievement_note`,[`<span class="has-text-caution">${loc(`achieve_pathfinder_name`)}</span>`]),
-            loc(`wiki_perks_achievement_note_pathfinder`,[`<span class="has-text-caution">${loc(`evo_challenge_truepath`)}</span>`]),
-            loc(`wiki_perks_achievement_note_pathfinder_reset`,[`<span class="has-text-${global.stats.achieve['ashanddust'] ? 'success' : 'danger'}">${loc(`wiki_resets_mad`)}</span>`]),
-            loc(`wiki_perks_achievement_note_pathfinder_reset`,[`<span class="has-text-${global.stats.achieve['exodus'] ? 'success' : 'danger'}">${loc(`wiki_resets_bioseed`)}</span>`]),
-            loc(`wiki_perks_achievement_note_pathfinder_reset`,[`<span class="has-text-${global.stats.achieve['obsolete'] ? 'success' : 'danger'}">${loc(`wiki_resets_ai`)}</span>`]),
-        ]
-    },
-    creep: {
-        name: loc(`wiki_arpa_crispr_creep`),
-        desc(wiki){
-            let bonus = wiki ? "0.01/0.02/0.03/0.04/0.05" : global.genes['creep'] ? global.genes.creep * 0.01 : 0;
-            return loc("arpa_perks_creep",[bonus]);
-        },
-        active(){
-            return global.genes['creep'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_genetic_memory_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_animus_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_divine_remembrance_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_divine_proportion_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_genetic_repository_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    store: {
-        name: loc(`wiki_arpa_crispr_store`),
-        desc(wiki){
-            let psb = wiki ? "0.04/0.06/0.08" : global.genes['store'] && global.genes.store > 1 ? (global.genes.store === 2 ? 0.06 : 0.08) : 0.04;
-            return loc(global.genes['store'] && global.genes.store >= 4 ? "arpa_perks_store2" : "arpa_perks_store1",[psb]);
-        },
-        active(){
-            return global.genes['store'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_spatial_reasoning_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_spatial_superiority_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_spatial_supremacy_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_dimensional_warping_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    evolve: {
-        name: loc(`wiki_arpa_crispr_evolve`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_perks_evolve");
-                },
-                active(){
-                    return global.genes['evolve'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_recombination_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_homologous_recombination_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_genetic_reshuffling_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 4 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_recombinant_dna_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 5 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_chimeric_dna_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 6 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_molecular_cloning_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 7 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_transgenes_desc");
-                },
-                active(){
-                    return global.genes['evolve'] && global.genes.evolve >= 8 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_morphogenesis_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_recombination_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_homologous_recombination_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_genetic_reshuffling_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_recombinant_dna_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_chimeric_dna_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_molecular_cloning_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_transgenes_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    birth: {
-        name: loc(`wiki_arpa_crispr_birth`),
-        desc(){
-            return loc("arpa_perks_birth");
-        },
-        active(){
-            return global.genes['birth'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_replication_title`)}</span>`]),
-        ]
-    },
-    enhance: {
-        name: loc(`wiki_arpa_crispr_enhance`),
-        desc(){
-            return loc("arpa_perks_enhance");
-        },
-        active(){
-            return global.genes['enhance'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_enhanced_muscle_fiber_title`)}</span>`])
-        ]
-    },
-    crafty: {
-        name: loc(`wiki_arpa_crispr_crafty`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_genepool_artificer_desc");
-                },
-                active(){
-                    return global.genes['crafty'] ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let bonus = wiki ? "50/100" : global.genes['crafty'] && global.genes.crafty >= 3 ? 100 : 50;
-                    return loc("arpa_genepool_crafting_desc",[bonus]);
-                },
-                active(){
-                    return global.genes['crafty'] && global.genes.crafty >= 2 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_artificer_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_detail_oriented_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_rigorous_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    governor: {
-        name: loc(`wiki_arpa_crispr_governor`),
-        desc(){
-            return loc("arpa_perks_governor");
-        },
-        active(){
-            return global.genes['governor'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_governance_title`)}</span>`])
-        ]
-    },
-    synthesis: {
-        name: loc(`wiki_arpa_crispr_synthesis`),
-        desc(wiki){
-            let base = wiki ? "2/3/4" : global.genes['synthesis'] && global.genes['synthesis'] >= 2 ? (global.genes['synthesis'] >= 3 ? 4 : 3) : 2;
-            let auto = wiki ? "10/25/50" : global.genes['synthesis'] && global.genes['synthesis'] >= 2 ? (global.genes['synthesis'] >= 3 ? 50 : 25) : 10;
-            return loc("arpa_genepool_synthesis_desc",[base,auto]);
-        },
-        active(){
-            return global.genes['synthesis'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_synthesis_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_karyokinesis_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_cytokinesis_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    challenge: {
-        name: loc(`wiki_arpa_crispr_challenge`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_perks_challenge");
-                },
-                active(){
-                    return global.genes['challenge'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_unlocked_desc");
-                },
-                active(){
-                    return global.genes['challenge'] && global.genes.challenge >= 2 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    return loc("arpa_perks_challenge2",[
-                        wiki ? "60/80" : global.genes['challenge'] && global.genes['challenge'] >= 4 ? 80 : 60,
-                        wiki ? "60/40" : global.genes['challenge'] && global.genes['challenge'] >= 4 ? 40 : 60
-                    ]);
-                },
-                active(){
-                    return global.genes['challenge'] && global.genes.challenge >= 3 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_perks_challenge3");
-                },
-                active(){
-                    return global.genes['challenge'] && global.genes.challenge >= 5 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_hardened_genes_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_unlocked_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_universal_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_standard_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_mastered_title`)}</span>`
-                ].join(', ')
-            ]),
-            loc(`wiki_perks_crispr_note_challenge`,[loc(`arpa_genepool_universal_title`),loc(`arpa_genepool_standard_title`)])
-        ]
-    },
-    ancients: {
-        name: loc(`wiki_arpa_crispr_ancients`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_perks_ancients");
-                },
-                active(){
-                    return global.genes['ancients'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return global.genes['ancients'] && global.genes.ancients >= 4 ? loc("arpa_perks_ancients3") : loc("arpa_perks_ancients2");
-                },
-                active(){
-                    return global.genes['ancients'] && global.genes.ancients >= 2 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    return loc("arpa_perks_ancients4",[wiki ? "25/50" : global.genes['ancients'] && global.genes.ancients >= 5 ? 50 : 25]);
-                },
-                active(){
-                    return global.genes['ancients'] && global.genes.ancients >= 3 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_ancients_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_faith_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_devotion_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_acolyte_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_conviction_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    trader: {
-        name: loc(`wiki_arpa_crispr_trader`),
-        desc(){
-            return loc("arpa_genepool_negotiator_desc");
-        },
-        active(){
-            return global.genes['trader'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_negotiator_title`)}</span>`])
-        ]
-    },
-    transcendence: {
-        name: loc(`wiki_arpa_crispr_transcendence`),
-        desc(){
-            return loc("arpa_genepool_transcendence_desc");
-        },
-        active(){
-            return global.genes['transcendence'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_transcendence_title`)}</span>`])
-        ]
-    },
-    queue: {
-        name: loc(`wiki_arpa_crispr_queue`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_genepool_geographer_desc");
-                },
-                active(){
-                    return global.genes['queue'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_architect_desc");
-                },
-                active(){
-                    return global.genes['queue'] && global.genes.queue >= 2 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_geographer_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_architect_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    plasma: {
-        name: loc(`wiki_arpa_crispr_plasma`),
-        desc(wiki){
-            let plasmid_cap = wiki ? "3/5" : global.genes['plasma'] >= 2 ? 5 : 3;
-            return loc('arpa_genepool_mitosis_desc',[plasmid_cap]);
-        },
-        active(){
-            return global.genes['plasma'] ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_mitosis_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_metaphase_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    mutation: {
-        name: loc(`wiki_arpa_crispr_mutation`),
-        group: [
-            {
-                desc(){
-                    return global.genes['mutation'] && global.genes.mutation > 1 ? loc("arpa_perks_mutation2") : loc("arpa_perks_mutation1");
-                },
-                active(){
-                    return global.genes['mutation'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_perks_mutation3");
-                },
-                active(){
-                    return global.genes['mutation'] && global.genes.mutation >= 3 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_mutation_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_transformation_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_metamorphosis_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    bleed: {
-        name: loc(`wiki_arpa_crispr_bleed`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_genepool_bleeding_effect_desc",[2.5]);
-                },
-                active(){
-                    return global.genes['bleed'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_synchronicity_desc",[25]);
-                },
-                active(){
-                    return global.genes['bleed'] && global.genes.bleed >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_astral_awareness_desc");
-                },
-                active(){
-                    return global.genes['bleed'] && global.genes.bleed >= 3 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_bleeding_effect_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_synchronicity_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_astral_awareness_title`)}</span>`
-                ].join(', ')
-            ]),
-            loc(`wiki_perks_crispr_note_bleed`,[`<span class="has-text-caution">${loc(`arpa_genepool_bleeding_effect_title`)}</span>`]),
-        ]
-    },
-    blood: {
-        name: loc(`wiki_arpa_crispr_blood`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_genepool_blood_remembrance_desc");
-                },
-                active(){
-                    return global.genes['blood'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_blood_sacrifice_desc");
-                },
-                active(){
-                    return global.genes['blood'] && global.genes.blood >= 2 ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_genepool_essence_absorber_desc");
-                },
-                active(){
-                    return global.genes['blood'] && global.genes.blood >= 3 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_crispr_note`,[`<span class="has-text-caution">${loc(`arpa_genepool_blood_remembrance_title`)}</span>`]),
-            loc(`wiki_perks_crispr_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_genepool_blood_sacrifice_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_genepool_essence_absorber_title`)}</span>`
-                ].join(', ')
-            ]),
-            loc(`wiki_perks_crispr_note_blood`,[loc(`arpa_genepool_blood_remembrance_title`)])
-        ]
-    },
-    spire: {
-        name: loc(`wiki_arpa_blood_spire`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_blood_purify_desc");
-                },
-                active(){
-                    return global.blood['spire'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_blood_chum_desc");
-                },
-                active(){
-                    return global.blood['spire'] && global.blood.spire >= 2 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_purify_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_blood_chum_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    lust: {
-        name: loc(`wiki_arpa_blood_lust`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_lust",[wiki ? 0.2 : 0.2 * (global.blood['lust'] ? global.blood['lust'] : 1)]);
-                },
-                active(){
-                    return global.blood['lust'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_lust_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_lust_title`)])
-        ]
-    },
-    illuminate: {
-        name: loc(`wiki_arpa_blood_illuminate`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_illuminate",[wiki ? 0.01 : 0.01 * (global.blood['illuminate'] ? global.blood['illuminate'] : 1)]);
-                },
-                active(){
-                    return global.blood['illuminate'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_illuminate_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_illuminate_title`)])
-        ]
-    },
-    greed: {
-        name: loc(`wiki_arpa_blood_greed`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_greed",[wiki ? 1 : 1 * (global.blood['greed'] ? global.blood['greed'] : 1)]);
-                },
-                active(){
-                    return global.blood['greed'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_greed_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_greed_title`)])
-        ]
-    },
-    hoarder: {
-        name: loc(`wiki_arpa_blood_hoarder`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_hoarder",[wiki ? 1 : 1 * (global.blood['hoarder'] ? global.blood['hoarder'] : 1)]);
-                },
-                active(){
-                    return global.blood['hoarder'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_hoarder_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_hoarder_title`)])
-        ]
-    },
-    artisan: {
-        name: loc(`wiki_arpa_blood_artisan`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_artisan",[wiki ? 1 : 1 * (global.blood['artisan'] ? global.blood['artisan'] : 1)]);
-                },
-                active(){
-                    return global.blood['artisan'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_artisan_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_artisan_title`)])
-        ]
-    },
-    attract: {
-        name: loc(`wiki_arpa_blood_attract`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_attract",[wiki ? 5 : 5 * (global.blood['attract'] ? global.blood['attract'] : 1)]);
-                },
-                active(){
-                    return global.blood['attract'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_attract_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_attract_title`)])
-        ]
-    },
-    wrath: {
-        name: loc(`wiki_arpa_blood_wrath`),
-        group: [
-            {
-                desc(wiki){
-                    return loc("arpa_perks_wrath",[wiki ? 5 : 5 * (global.blood['wrath'] ? global.blood['wrath'] : 1)]);
-                },
-                active(){
-                    return global.blood['wrath'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_wrath_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_repeat`,[loc(`arpa_blood_wrath_title`)])
-        ]
-    },
-    prepared: {
-        name: loc(`wiki_arpa_blood_prepared`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_blood_prepared_desc");
-                },
-                active(){
-                    return global.blood['prepared'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_blood_compact_desc");
-                },
-                active(){
-                    return global.blood['prepared'] && global.blood.prepared >= 2 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_prepared_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_blood_compact_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    unbound: {
-        name: loc(`wiki_arpa_blood_unbound`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_blood_unbound_desc");
-                },
-                active(){
-                    return global.blood['unbound'] ? true : false;
-                }
-            },
-            {
-                desc(){
-                    return loc("arpa_blood_shadow_war_desc");
-                },
-                active(){
-                    return global.blood['unbound'] && global.blood.unbound >= 3 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    return loc("arpa_perks_unbound_resist",[wiki ? "10/5" : global.blood['unbound'] && global.blood.unbound >= 4 ? 5 : 10]);
-                },
-                active(){
-                    return global.blood['unbound'] && global.blood.unbound >= 2 ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_unbound_title`)}</span>`]),
-            loc(`wiki_perks_blood_note_upgrade`,[ 
-                [
-                    `<span class="has-text-caution">${loc(`arpa_blood_unbound_resistance_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_blood_shadow_war_title`)}</span>`,
-                    `<span class="has-text-caution">${loc(`arpa_blood_unbound_immunity_title`)}</span>`
-                ].join(', ')
-            ])
-        ]
-    },
-    aware: {
-        name: loc(`wiki_arpa_blood_aware`),
-        group: [
-            {
-                desc(){
-                    return loc("arpa_blood_blood_aware_desc");
-                },
-                active(){
-                    return global.blood['aware'] ? true : false;
-                }
-            }
-        ],
-        notes: [
-            loc(`wiki_perks_blood_note`,[`<span class="has-text-caution">${loc(`arpa_blood_blood_aware_title`)}</span>`])
-        ]
-    },
-    harmonic: {
-        name: loc(`harmonic`),
-        group: [
-            {
-                desc(wiki){
-                    let harmonic = calcPillar();
-                    return loc("perks_harmonic",[wiki ? `1-${Object.keys(races).length + 2}` : +((harmonic[0] - 1) * 100).toFixed(0), wiki ? `2-${(Object.keys(races).length + 2) * 2}` : +((harmonic[1] - 1) * 100).toFixed(0)]);
-                },
-                active(){
-                    let harmonic = calcPillar();
-                    return global['pillars'] && harmonic[0] > 1 ? true : false;
-                }
-            },
-            {
-                desc(wiki){
-                    let harmonic = calcPillar();
-                    return loc("perks_harmonic2",[loc("portal_west_tower"), loc("portal_east_tower"), wiki ? `12-${(Object.keys(races).length - 1) * 12}` : +(Object.keys(global.pillars).length * 12)]);
-                },
-                active(){
-                    let harmonic = calcPillar();
-                    return global['pillars'] && harmonic[0] > 1 ? true : false;
-                }
-            },
-        ],
-        notes: [
-            loc(`wiki_perks_harmonic_note1`),
-            loc(`wiki_perks_harmonic_note2`)
-        ]
-    },
-    novice: {
-        name: loc(`perk_novice`),
-        desc(wiki){
-            let rank = global.stats.feat['novice'] && global.stats.achieve['apocalypse'] && global.stats.achieve.apocalypse.l > 0 ? Math.min(global.stats.achieve.apocalypse.l,global.stats.feat['novice']) : 1;
-            let rna = wiki ? "0.5/1/1.5/2/2.5" : rank / 2;
-            let dna = wiki ? "0.25/0.5/0.75/1/1.25" : rank / 4;
-            return `<div>${loc("achieve_perks_novice",[rna,dna])}</div><div>${loc("achieve_perks_novice2")}</div>`;
-        },
-        active(){
-            return global.stats.feat['novice'] && global.stats.mad > 0 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_progress_note1`,[10,loc(`wiki_resets_mad`)]),
-            loc(`wiki_perks_progress_note2`)
-        ]
-    },
-    journeyman: {
-        name: loc(`perk_journeyman`),
-        desc(wiki){
-            let rank = global.stats.feat['journeyman'] && global.stats.achieve['seeder'] && global.stats.achieve.seeder.l > 0 ? Math.min(global.stats.achieve.seeder.l,global.stats.feat['journeyman']) : 1;
-            if (wiki || rank > 1){
-                let rqueue = wiki ? "1/2/3" : rank >= 3 ? (rank >= 5 ? 3 : 2) : 1;
-                let queue = wiki ? "1/2" : rank >= 4 ? 2 : 1;
-                return `<div>${loc("achieve_perks_journeyman2",[rqueue,queue])}</div><div>${loc("achieve_perks_journeyman3")}</div>`;
-            }
-            else {
-                return `<div>${loc("achieve_perks_journeyman1",[1])}</div><div>${loc("achieve_perks_journeyman3")}</div>`;
-            }
-        },
-        active(){
-            return global.stats.feat['journeyman'] && global.stats.bioseed > 0 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_progress_note1`,[25,loc(`wiki_resets_bioseed`)]),
-            loc(`wiki_perks_progress_note2`)
-        ]
-    },
-    adept: {
-        name: loc(`perk_adept`),
-        desc(wiki){
-            let rank = global.stats.feat['adept'] && global.stats.achieve['whitehole'] && global.stats.achieve.whitehole.l > 0 ? Math.min(global.stats.achieve.whitehole.l,global.stats.feat['adept']) : 1;
-            let res = wiki ? "100/200/300/400/500" : rank * 100;
-            let cap = wiki ? "60/120/180/240/300" : rank * 60;
-            return loc("achieve_perks_adept",[res,cap]);
-        },
-        active(){
-            return global.stats.feat['adept'] && global.stats.achieve['whitehole'] && global.stats.achieve.whitehole.l > 0 ? true : false;
-        },
-        notes: [
-            loc(`wiki_perks_progress_note1`,[50,loc(`wiki_resets_blackhole`)]),
-            loc(`wiki_perks_progress_note2`)
-        ]
-    },
-};
 
 export function drawPerks(){
     clearElement($('#perksPanel'));

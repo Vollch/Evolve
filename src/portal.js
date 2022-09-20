@@ -11,1677 +11,1680 @@ import { govActive } from './governor.js';
 import { loadTab } from './index.js';
 import { loc } from './locale.js';
 
-const fortressModules = {
-    prtl_fortress: {
-        info: {
-            name: loc('portal_fortress_name'),
-            desc: loc('portal_fortress_desc'),
-            repair(){
-                let repair = 200;
-                if (p_on['repair_droid']){
-                    repair *= 0.95 ** p_on['repair_droid'];
-                }
-                return Math.round(repair);
-            }
-        },
-        turret: {
-            id: 'portal-turret',
-            title(){
-                let type = global.tech['turret'] ? (global.tech['turret'] >= 2 ? 'portal_turret_title3' : 'portal_turret_title2') : 'portal_turret_title1';
-                return loc(type);
-            },
-            desc(){
-                let type = global.tech['turret'] ? (global.tech['turret'] >= 2 ? 'portal_turret_title3' : 'portal_turret_title2') : 'portal_turret_title1';
-                return `<div>${loc(type)}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { portal: 2 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('turret', offset, 350000, 1.28, 'portal'); },
-                Copper(offset){ return spaceCostMultiplier('turret', offset, 50000, 1.28, 'portal'); },
-                Adamantite(offset){ return spaceCostMultiplier('turret', offset, 8000, 1.28, 'portal'); },
-                Elerium(offset){ return spaceCostMultiplier('turret', offset, 15, 1.28, 'portal'); },
-                Nano_Tube(offset){ return spaceCostMultiplier('turret', offset, 28000, 1.28, 'portal'); }
-            },
-            powered(){
-                return powerCostMod(global.tech['turret'] ? 4 + global.tech['turret'] : 4);
-            },
-            postPower(o){
-                p_on['turret'] = global.portal.turret.on;
-                vBind({el: `#fort`},'update');
-            },
-            effect(){
-                let rating = global.tech['turret'] ? (global.tech['turret'] >= 2 ? 70 : 50) : 35;
-                let power = $(this)[0].powered();
-                return `<div>${loc('portal_turret_effect',[rating])}</div><div class="has-text-caution">${loc('minus_power',[power])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('turret','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.turret.on++;
-                        p_on['turret']++;
-                        vBind({el: `#fort`},'update');
+export var fortressModules;
+export function initFortress(){
+    fortressModules = {
+        prtl_fortress: {
+            info: {
+                name: loc('portal_fortress_name'),
+                desc: loc('portal_fortress_desc'),
+                repair(){
+                    let repair = 200;
+                    if (p_on['repair_droid']){
+                        repair *= 0.95 ** p_on['repair_droid'];
                     }
-                    return true;
+                    return Math.round(repair);
                 }
-                return false;
-            }
-        },
-        carport: {
-            id: 'portal-carport',
-            title: loc('portal_carport_title'),
-            desc(){
-                return loc('portal_carport_desc',[1]);
             },
-            reqs: { portal: 2 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('carport', offset, 250000, 1.3, 'portal'); },
-                Cement(offset){ return spaceCostMultiplier('carport', offset, 18000, 1.3, 'portal'); },
-                Oil(offset){ return spaceCostMultiplier('carport', offset, 6500, 1.3, 'portal'); },
-                Plywood(offset){ return spaceCostMultiplier('carport', offset, 8500, 1.3, 'portal'); }
-            },
-            repair(){
-                let repair = 180;
-                if (p_on['repair_droid']){
-                    repair *= 0.92 ** p_on['repair_droid'];
-                }
-                return Math.round(repair);
-            },
-            effect(){
-                return `${loc('portal_carport_effect',[1])}`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('carport','portal');
-                    global.civic.hell_surveyor.display = true;
-                    global.resource.Infernite.display = true;
-                    if (!global.tech['infernite']){
-                        global.tech['infernite'] = 1;
-                        drawTech();
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        war_droid: {
-            id: 'portal-war_droid',
-            title: loc('portal_war_droid_title'),
-            desc(){
-                return `<div>${loc('portal_war_droid_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { portal: 5 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('war_droid', offset, 495000, 1.26, 'portal'); },
-                Neutronium(offset){ return spaceCostMultiplier('war_droid', offset, 1250, 1.26, 'portal'); },
-                Elerium(offset){ return spaceCostMultiplier('war_droid', offset, 18, 1.26, 'portal'); },
-                Stanene(offset){ return spaceCostMultiplier('war_droid', offset, 37500, 1.26, 'portal'); },
-                Soul_Gem(offset){ return spaceCostMultiplier('war_droid', offset, 1, 1.26, 'portal'); }
-            },
-            powered(){ return powerCostMod(2); },
-            effect(){
-                return `<div>${loc('portal_war_droid_effect')}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('war_droid','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.war_droid.on++;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            flair: loc('portal_war_droid_flair')
-        },
-        repair_droid: {
-            id: 'portal-repair_droid',
-            title: loc('portal_repair_droid_title'),
-            desc(){
-                return `<div>${loc('portal_repair_droid_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { portal: 6 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('repair_droid', offset, 444000, 1.26, 'portal'); },
-                Iron(offset){ return spaceCostMultiplier('repair_droid', offset, 88000, 1.26, 'portal'); },
-                Iridium(offset){ return spaceCostMultiplier('repair_droid', offset, 17616, 1.26, 'portal'); },
-                Infernite(offset){ return spaceCostMultiplier('repair_droid', offset, 666, 1.26, 'portal'); },
-                Soul_Gem(offset){ return spaceCostMultiplier('repair_droid', offset, 1, 1.15, 'portal'); }
-            },
-            powered(){ return powerCostMod(3); },
-            effect(){
-                return `<div>${loc('portal_repair_droid_effect',[5])}</div><div>${loc('portal_repair_droid_effect2',[8])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('repair_droid','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.repair_droid.on++;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            flair: loc('portal_repair_droid_flair')
-        },
-    },
-    prtl_badlands: {
-        info: {
-            name: loc('portal_badlands_name'),
-            desc: loc('portal_badlands_desc'),
-        },
-        war_drone: {
-            id: 'portal-war_drone',
-            title: loc('portal_war_drone_title'),
-            desc(){
-                return `<div>${loc('portal_war_drone_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { portal: 3 },
-            powered(){ return powerCostMod(5); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('war_drone', offset, 650000, 1.28, 'portal'); },
-                Alloy(offset){ return spaceCostMultiplier('war_drone', offset, 60000, 1.28, 'portal'); },
-                Graphene(offset){ return spaceCostMultiplier('war_drone', offset, 100000, 1.28, 'portal'); },
-                Elerium(offset){ return spaceCostMultiplier('war_drone', offset, 25, 1.28, 'portal'); },
-                Soul_Gem(offset){ return spaceCostMultiplier('war_drone', offset, 1, 1.28, 'portal'); }
-            },
-            effect(){
-                return `<div>${loc('portal_war_drone_effect')}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('war_drone','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.war_drone.on++;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            flair: loc('portal_war_drone_flair')
-        },
-        sensor_drone: {
-            id: 'portal-sensor_drone',
-            title: loc('portal_sensor_drone_title'),
-            desc(){
-                return `<div>${loc('portal_sensor_drone_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { infernite: 2 },
-            powered(){ return powerCostMod(3); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('sensor_drone', offset, 500000, 1.25, 'portal'); },
-                Polymer(offset){ return spaceCostMultiplier('sensor_drone', offset, 25000, 1.25, 'portal'); },
-                Adamantite(offset){ return spaceCostMultiplier('sensor_drone', offset, 12500, 1.25, 'portal'); },
-                Infernite(offset){ return spaceCostMultiplier('sensor_drone', offset, 100, 1.25, 'portal'); }
-            },
-            effect(){
-                let bonus = global.tech.infernite >= 4 ? (global.tech.infernite >= 6 ? 50 : 20) : 10;
-                let know = global.tech.infernite >= 6 ? 2500 : 1000;
-                let sci_bonus = global.race['cataclysm'] ? `<div>${loc('space_moon_observatory_cata_effect',[2])}</div>` : `<div>${loc('space_moon_observatory_effect',[2])}</div><div>${loc('portal_sensor_drone_effect2',[2])}</div>`;
-                let sci = global.tech['science'] >= 14 ? `<div>${loc('city_max_knowledge',[know])}</div>${sci_bonus}` : '';
-                return `<div>${loc('portal_sensor_drone_effect',[bonus])}</div>${sci}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('sensor_drone','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.sensor_drone.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        attractor: {
-            id: 'portal-attractor',
-            title: loc('portal_attractor_title'),
-            desc(){
-                return `<div>${loc('portal_attractor_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { portal: 4 },
-            powered(){ return powerCostMod(3); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('attractor', offset, 350000, 1.25, 'portal'); },
-                Aluminium(offset){ return spaceCostMultiplier('attractor', offset, 175000, 1.25, 'portal'); },
-                Stanene(offset){ return spaceCostMultiplier('attractor', offset, 90000, 1.25, 'portal'); },
-            },
-            effect(){
-                return `<div>${loc('portal_attractor_effect1')}</div><div>${loc('portal_attractor_effect2',[global.resource.Soul_Gem.name])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('attractor','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.attractor.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-    },
-    prtl_pit: {
-        info: {
-            name: loc('portal_pit_name'),
-            desc: loc('portal_pit_desc'),
-        },
-        pit_mission: {
-            id: 'portal-pit_mission',
-            title: loc('portal_pit_mission_title'),
-            desc: loc('portal_pit_mission_title'),
-            reqs: { hell_pit: 1 },
-            grant: ['hell_pit',2],
-            queue_complete(){ return global.tech.hell_pit >= 2 ? 0 : 1; },
-            cost: {
-                Money(){ return 5000000; },
-                Helium_3(){ return 300000; },
-                Deuterium(){ return 200000; }
-            },
-            effect: loc('portal_pit_mission_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('portal_pit_mission_result'),'info',false,['progress','hell']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        assault_forge: {
-            id: 'portal-assault_forge',
-            title: loc('portal_assault_forge_title'),
-            desc: loc('portal_assault_forge_title'),
-            reqs: { hell_pit: 2 },
-            grant: ['hell_pit',3],
-            queue_complete(){ return global.tech.hell_pit >= 3 ? 0 : 1; },
-            cost: {
-                Money(){ return 10000000; },
-                HellArmy(){
-                    return Math.round(650 / armyRating(1,'hellArmy'));
+            turret: {
+                id: 'portal-turret',
+                title(){
+                    let type = global.tech['turret'] ? (global.tech['turret'] >= 2 ? 'portal_turret_title3' : 'portal_turret_title2') : 'portal_turret_title1';
+                    return loc(type);
                 },
-                Cement(){ return 10000000; },
-                Adamantite(){ return 1250000; },
-                Elerium(){ return 2400; },
-                Stanene(){ return 900000; }
-            },
-            effect: loc('portal_assault_forge_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('portal_assault_forge_result'),'info',false,['progress','hell']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        soul_forge: {
-            id: 'portal-soul_forge',
-            title: loc('portal_soul_forge_title'),
-            desc(){
-                return `<div>${loc('portal_soul_forge_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_pit: 4 },
-            queue_complete(){ return 1 - global.portal.soul_forge.count; },
-            powered(){ return powerCostMod(30); },
-            postPower(o){
-                vBind({el: `#fort`},'update');
-            },
-            cost: {
-                Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 25000000 : 0; },
-                Graphene(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 1500000 : 0; },
-                Infernite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 25000 : 0; },
-                Bolognium(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 100000 : 0; },
-            },
-            effect(wiki){
-                let desc = `<div>${loc('portal_soul_forge_effect',[global.resource.Soul_Gem.name])}</div>`;
-                let count = (wiki || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0);
-                if (count >= 1){
-                    let cap = global.tech.hell_pit >= 6 ? 750000 : 1000000;
-                    if (global.tech.hell_pit >= 7 && p_on['soul_attractor'] > 0){
-                        cap *= 0.97 ** p_on['soul_attractor'];
-                    }
-                    desc = desc + `<div>${loc('portal_soul_forge_effect2',[global.portal['soul_forge'] ? global.portal.soul_forge.kills.toLocaleString() : 0,Math.round(cap).toLocaleString()])}</div>`;
-                }
-                let soldiers = soulForgeSoldiers();
-                return `${desc}<div><span class="has-text-caution">${loc('portal_soul_forge_soldiers',[soldiers])}</span>, <span class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</span></div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    if (global.portal.soul_forge.count < 1){
-                        incrementStruct('soul_forge','portal');
-                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                            global.portal.soul_forge.on++;
-                        }
-                        return true;
-                    }
-                }
-                return false;
-            }
-        },
-        gun_emplacement: {
-            id: 'portal-gun_emplacement',
-            title: loc('portal_gun_emplacement_title'),
-            desc(){
-                return `<div>${loc('portal_gun_emplacement_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_gun: 1 },
-            powered(){ return powerCostMod(3); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('gun_emplacement', offset, 4000000, 1.25, 'portal'); },
-                Coal(offset){ return spaceCostMultiplier('gun_emplacement', offset, 250000, 1.25, 'portal'); },
-                Steel(offset){ return spaceCostMultiplier('gun_emplacement', offset, 1200000, 1.25, 'portal'); },
-                Wrought_Iron(offset){ return spaceCostMultiplier('gun_emplacement', offset, 200000, 1.25, 'portal'); },
-            },
-            effect(){
-                let soldiers = global.tech.hell_gun >= 2 ? 2 : 1;
-                let min = global.tech.hell_gun >= 2 ? 35 : 20;
-                let max = global.tech.hell_gun >= 2 ? 75 : 40;
-                return `<div>${loc('portal_gun_emplacement_effect',[soldiers])}</div><div>${loc('portal_gun_emplacement_effect2',[min,max])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('gun_emplacement','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.gun_emplacement.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        soul_attractor: {
-            id: 'portal-soul_attractor',
-            title: loc('portal_soul_attractor_title'),
-            desc(){
-                return `<div>${loc('portal_soul_attractor_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_pit: 5 },
-            powered(){ return powerCostMod(4); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('soul_attractor', offset, 12000000, 1.25, 'portal'); },
-                Stone(offset){ return spaceCostMultiplier('soul_attractor', offset, 23000000, 1.25, 'portal'); },
-                Nano_Tube(offset){ return spaceCostMultiplier('soul_attractor', offset, 314159, 1.25, 'portal'); },
-                Vitreloy(offset){ return spaceCostMultiplier('soul_attractor', offset, 1618, 1.25, 'portal'); },
-                Aerogel(offset){ return spaceCostMultiplier('soul_attractor', offset, 180000, 1.25, 'portal'); },
-            },
-            effect(){
-                let link = global.tech.hell_pit >= 7 ? `<div>${loc('portal_soul_attractor_effect2',[3])}</div>` : ``;
-                let attact = global.blood['attract'] ? global.blood.attract * 5 : 0;
-                return `<div>${loc('portal_soul_attractor_effect',[40 + attact, 120 + attact])}</div>${link}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('soul_attractor','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.soul_attractor.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-    },
-    prtl_ruins: {
-        info: {
-            name: loc('portal_ruins_name'),
-            desc: loc('portal_ruins_desc'),
-            support: 'guard_post',
-            prop(){
-                let desc = ` - <span class="has-text-advanced">${loc('portal_ruins_security')}:</span> <span class="has-text-caution">{{ on | filter('army') }}</span>`;
-                desc = desc + ` - <span class="has-text-advanced">${loc('portal_ruins_supressed')}:</span> <span class="has-text-caution">{{ on | filter('sup') }}</span>`;
-                return desc;
-            },
-            filter(v,type){
-                let sup = hellSupression('ruins');
-                switch (type){
-                    case 'army':
-                        return Math.round(sup.rating);
-                    case 'sup':
-                        let supress = +(sup.supress * 100).toFixed(2);
-                        return `${supress}%`;
-                }
-            }
-        },
-        ruins_mission: {
-            id: 'portal-ruins_mission',
-            title: loc('portal_ruins_mission_title'),
-            desc: loc('portal_ruins_mission_title'),
-            reqs: { hell_ruins: 1 },
-            grant: ['hell_ruins',2],
-            queue_complete(){ return global.tech.hell_ruins >= 2 ? 0 : 1; },
-            cost: {
-                Money(){ return 100000000; },
-                Oil(){ return 500000; },
-                Helium_3(){ return 500000; }
-            },
-            effect: loc('portal_ruins_mission_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('portal_ruins_mission_result'),'info',false,['progress','hell']);
-                    global.portal['vault'] = { count: 0 };
-                    global.portal['stonehedge'] = { count: 0 };
-                    global.portal['archaeology'] = { count: 0, on: 0 };
-                    return true;
-                }
-                return false;
-            }
-        },
-        guard_post: {
-            id: 'portal-guard_post',
-            title: loc('portal_guard_post_title'),
-            desc(){
-                return `<div>${loc('portal_guard_post_title')}</div><div class="has-text-special">${loc('requires_soldiers')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_ruins: 2 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('guard_post', offset, 8000000, 1.06, 'portal'); },
-                Lumber(offset){ return spaceCostMultiplier('guard_post', offset, 6500000, 1.06, 'portal'); },
-                Sheet_Metal(offset){ return spaceCostMultiplier('guard_post', offset, 300000, 1.06, 'portal'); },
-            },
-            powered(){ return powerCostMod(5); },
-            support(){ return 1; },
-            effect(){
-                let holy = global.race['holy'] ? 1 + (traits.holy.vars()[1] / 100) : 1;
-                let rating = Math.round(holy * armyRating(jobScale(1),'hellArmy',0));
-                return `<div>${loc('portal_guard_post_effect1',[rating])}</div><div class="has-text-caution">${loc('portal_guard_post_effect2',[jobScale(1),$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('guard_post','portal');
-                    global.portal.guard_post.on++;
-                    return true;
-                }
-                return false;
-            },
-            postPower(){
-                vBind({el: `#srprtl_ruins`},'update');
-                vBind({el: `#srprtl_gate`},'update');
-            }
-        },
-        vault: {
-            id: 'portal-vault',
-            title: loc('portal_vault_title'),
-            desc: loc('portal_vault_title'),
-            reqs: { hell_ruins: 2, hell_vault: 1 },
-            condition(){
-                return global.portal.vault.count >= 2 ? false : true;
-            },
-            queue_complete(){ return 2 - global.portal.vault.count; },
-            cost: {
-                Soul_Gem(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 0 ? 100 : 0; },
-                Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 1 ? 250000000 : 0; },
-                Adamantite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 1 ? 12500000 : 0; },
-                Orichalcum(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 1 ? 30000000 : 0; },
-            },
-            effect(wiki){
-                let count = (wiki || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0);
-                return count < 1 ? loc('portal_vault_effect',[100]) : loc('portal_vault_effect2'); },
-            action(){
-                if (global.portal.vault.count < 2 && payCosts($(this)[0])){
-                    incrementStruct('vault','portal');
-                    if (global.portal.vault.count === 2){
-                        global.tech.hell_ruins = 3;
-                        global.resource.Codex.display = true;
-                        global.resource.Codex.amount = 1;
-                        messageQueue(loc('portal_vault_result'),'info',false,['progress','hell']);
-                    }
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                if (global.portal.vault.count === 2){
-                    drawTech();
-                    renderFortress();
-                    clearPopper();
-                }
-            }
-        },
-        archaeology: {
-            id: 'portal-archaeology',
-            title: loc('portal_archaeology_title'),
-            desc(){
-                return `<div>${loc('portal_archaeology_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_ruins: 2 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('archaeology', offset, 100000000, 1.25, 'portal'); },
-                Titanium(offset){ return spaceCostMultiplier('archaeology', offset, 3750000, 1.25, 'portal'); },
-                Mythril(offset){ return spaceCostMultiplier('archaeology', offset, 1250000, 1.25, 'portal'); },
-            },
-            powered(){ return powerCostMod(8); },
-            effect(){
-                return `<div>${loc('portal_archaeology_effect',[jobScale(2)])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('archaeology','portal');
-                    global.civic.archaeologist.display = true;
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.portal.archaeology.on++;
-                        if (global.civic[global.civic.d_job].workers > 0){
-                            let hired = global.civic[global.civic.d_job].workers - jobScale(2) < 0 ? global.civic[global.civic.d_job].workers : jobScale(2);
-                            global.civic[global.civic.d_job].workers -= hired;
-                            global.civic.archaeologist.workers += hired;
-                        }
-                    }  
-                    return true;
-                }
-                return false;
-            }
-        },
-        arcology: {
-            id: 'portal-arcology',
-            title: loc('portal_arcology_title'),
-            desc(){
-                return `<div>${loc('portal_arcology_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { housing: 4 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('arcology', offset, 180000000, 1.22, 'portal'); },
-                Graphene(offset){ return spaceCostMultiplier('arcology', offset, 7500000, 1.22, 'portal'); },
-                Bolognium(offset){ return spaceCostMultiplier('arcology', offset, 2800000, 1.22, 'portal'); },
-                Orichalcum(offset){ return spaceCostMultiplier('arcology', offset, 5500000, 1.22, 'portal'); },
-                Nanoweave(offset){ return spaceCostMultiplier('arcology', offset, 650000, 1.22, 'portal'); },
-                Horseshoe(){ return global.race['hooved'] ? 13 : 0; }
-            },
-            powered(){ return powerCostMod(25); },
-            effect(){
-                let sup = hellSupression('ruins');
-                let vault = spatialReasoning(bank_vault() * 8 * sup.supress);
-                vault = +(vault).toFixed(0);
-                let containers = Math.round(quantum_level) * 10;
-                let container_string = `<div>${loc('plus_max_resource',[containers,loc('resource_Crates_name')])}</div><div>${loc('plus_max_resource',[containers,loc('resource_Containers_name')])}</div>`;
-                return `<div>${loc('plus_max_resource',[`\$${vault.toLocaleString()}`,loc('resource_Money_name')])}</div><div>${loc('plus_max_citizens',[$(this)[0].citizens()])}</div><div>${loc('plus_max_resource',[jobScale(5),loc('civics_garrison_soldiers')])}</div><div>${loc('portal_guard_post_effect1',[75])}</div>${container_string}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('arcology','portal');
-                    if (global.city.power >= $(this)[0].powered()){
-                        global['resource'][global.race.species].max += 8;
-                        global.portal.arcology.on++;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                vBind({el: `#srprtl_ruins`},'update');
-                drawTech();
-            },
-            postPower(){
-                vBind({el: `#srprtl_ruins`},'update');
-            },
-            citizens(){
-                let pop = 8;
-                if (global.race['high_pop']){
-                    pop *= traits.high_pop.vars()[0];
-                }
-                return pop;
-            }
-        },
-        hell_forge: {
-            id: 'portal-hell_forge',
-            title: loc('portal_hell_forge_title'),
-            desc(){
-                return `<div>${loc('portal_hell_forge_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { scarletite: 1 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('hell_forge', offset, 250000000, 1.15, 'portal'); },
-                Coal(offset){ return spaceCostMultiplier('hell_forge', offset, 1650000, 1.22, 'portal'); },
-                Steel(offset){ return spaceCostMultiplier('hell_forge', offset, 3800000, 1.22, 'portal'); },
-                Iridium(offset){ return spaceCostMultiplier('hell_forge', offset, 1200000, 1.22, 'portal'); },
-                Neutronium(offset){ return spaceCostMultiplier('hell_forge', offset, 280000, 1.22, 'portal'); },
-                Soul_Gem(offset){ return spaceCostMultiplier('hell_forge', offset, 5, 1.22, 'portal'); },
-            },
-            powered(){ return powerCostMod(12); },
-            special: true,
-            effect(){
-                let sup = hellSupression('ruins');
-                let craft = +(75 * sup.supress).toFixed(1);
-                let reactor = global.tech['inferno_power'] ? `<div>${loc('portal_hell_forge_effect2',[10,loc(`portal_inferno_power_title`)])}</div>` : ``;
-                return `<div>${loc('portal_hell_forge_effect',[jobScale(1)])}</div>${reactor}<div>${loc('interstellar_stellar_forge_effect3',[3])}</div><div>${loc('interstellar_stellar_forge_effect',[craft])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('hell_forge','portal');
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.portal.hell_forge.on++;
-                        global.city.smelter.cap += 3;
-                        global.city.smelter.Oil += 3;
-                        global.city.smelter.Iron += 3;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                loadFoundry();
-            },
-            postPower(on){
-                if (!on){
-                    if (global.portal.hell_forge.on < global.city.foundry.Scarletite){
-                        let diff = global.city.foundry.Scarletite - global.portal.hell_forge.on;
-                        global.civic.craftsman.workers -= diff;
-                        global.city.foundry.crafting -= diff;
-                        global.city.foundry.Scarletite -= diff;
-                    }
-                }
-                loadFoundry();
-            }
-        },
-        inferno_power: {
-            id: 'portal-inferno_power',
-            title: loc('portal_inferno_power_title'),
-            desc(){
-                return `<div>${loc('portal_inferno_power_title')}</div>`;
-            },
-            reqs: { inferno_power: 1 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('inferno_power', offset, 275000000, 1.16, 'portal'); },
-                Neutronium(offset){ return spaceCostMultiplier('inferno_power', offset, 3750000, 1.18, 'portal'); },
-                Stanene(offset){ return spaceCostMultiplier('inferno_power', offset, 12000000, 1.18, 'portal'); },
-                Bolognium(offset){ return spaceCostMultiplier('inferno_power', offset, 8000000, 1.18, 'portal'); },
-            },
-            powered(){
-                let power = 20;
-                if (p_on.hasOwnProperty('hell_forge')){
-                    power += p_on['hell_forge'] * 10; 
-                }
-                return powerModifier(-(power));
-            },
-            fuel: {
-                Infernite: 5,
-                Coal: 100,
-                Oil: 80
-            },
-            effect(){
-                let fuel = $(this)[0].fuel;
-                return `<div>${loc('space_dwarf_reactor_effect1',[-($(this)[0].powered())])}</div><div class="has-text-caution">${loc('portal_inferno_power_effect',[fuel.Infernite,global.resource.Infernite.name,fuel.Coal,global.resource.Coal.name,fuel.Oil,global.resource.Oil.name])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('inferno_power','portal');
-                    global.portal.inferno_power.on++;
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                vBind({el: `#foundry`},'update');
-            },
-        },
-        ancient_pillars: {
-            id: 'portal-ancient_pillars',
-            title: loc('portal_ancient_pillars_title'),
-            desc: loc('portal_ancient_pillars_desc'),
-            reqs: { hell_ruins: 2 },
-            queue_complete(){ return global.tech['pillars'] && global.tech.pillars === 1 && global.race.universe !== 'micro' ? 1 : 0; },
-            cost: {
-                Harmony(wiki){
-                    if (wiki !== undefined){
-                        return wiki + Object.keys(global.pillars).length < Object.keys(races).length - 1 ? 1 : 0;
-                    }
-                    return global.race.universe !== 'micro' && global.tech['pillars'] && global.tech.pillars === 1 ? 1 : 0;
+                desc(){
+                    let type = global.tech['turret'] ? (global.tech['turret'] >= 2 ? 'portal_turret_title3' : 'portal_turret_title2') : 'portal_turret_title1';
+                    return `<div>${loc(type)}</div><div class="has-text-special">${loc('requires_power')}</div>`;
                 },
-                Scarletite(wiki){
-                    if (wiki !== undefined){
-                        let pillars = wiki + Object.keys(global.pillars).length;
-                        return pillars < Object.keys(races).length - 1 ? pillars * 125000 + 1000000 : 0;
-                    }
-                    return global.race.universe !== 'micro' && global.tech['pillars'] && global.tech.pillars === 1 ? Object.keys(global.pillars).length * 125000 + 1000000 : 0;
+                reqs: { portal: 2 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('turret', offset, 350000, 1.28, 'portal'); },
+                    Copper(offset){ return spaceCostMultiplier('turret', offset, 50000, 1.28, 'portal'); },
+                    Adamantite(offset){ return spaceCostMultiplier('turret', offset, 8000, 1.28, 'portal'); },
+                    Elerium(offset){ return spaceCostMultiplier('turret', offset, 15, 1.28, 'portal'); },
+                    Nano_Tube(offset){ return spaceCostMultiplier('turret', offset, 28000, 1.28, 'portal'); }
                 },
-            },
-            count(){
-                return Object.keys(races).length - 1;
-            },
-            on(){
-                return Object.keys(global.pillars).length;
-            },
-            effect(wiki){
-                let pillars = (wiki || 0) + Object.keys(global.pillars).length;
-                if (pillars >= 1){
-                    return `<div>${loc('portal_ancient_pillars_effect2',[Object.keys(races).length - 1,pillars])}</div>`;
-                }
-                else {
-                    return `<div>${loc('portal_ancient_pillars_effect',[Object.keys(races).length - 1])}</div>`;
-                }
-            },
-            action(){
-                if (global.tech['pillars'] && global.tech.pillars === 1 && global.race.universe !== 'micro'){
+                powered(){
+                    return powerCostMod(global.tech['turret'] ? 4 + global.tech['turret'] : 4);
+                },
+                postPower(o){
+                    p_on['turret'] = global.portal.turret.on;
+                    vBind({el: `#fort`},'update');
+                },
+                effect(){
+                    let rating = global.tech['turret'] ? (global.tech['turret'] >= 2 ? 70 : 50) : 35;
+                    let power = $(this)[0].powered();
+                    return `<div>${loc('portal_turret_effect',[rating])}</div><div class="has-text-caution">${loc('minus_power',[power])}</div>`;
+                },
+                action(){
                     if (payCosts($(this)[0])){
-                        global.pillars[global.race.species] = alevel();
-                        global.tech.pillars = 2;
-                        spatialReasoning(0,false,true);
-                        calcPillar(true);
-                        towerSize(true);
-                        unlockAchieve('resonance');
-                        vBind({el: `#portal-ancient_pillars`},'update');
-                        return true;
-                    }
-                }
-                return false;
-            }
-        },
-    },
-    prtl_gate: {
-        info: {
-            name: loc('portal_gate_name'),
-            desc(){
-                return `${loc('portal_gate_desc')} ${loc(global.tech['wtower'] && global.tech['etower'] ? 'portal_gate_open' : 'portal_gate_closed')}`;
-            },
-            support: 'guard_post',
-            hide_support: true,
-            prop(){
-                let desc = ` - <span class="has-text-advanced">${loc('portal_ruins_security')}:</span> <span class="has-text-caution">{{ on | filter('army') }}</span>`;
-                desc = desc + ` - <span class="has-text-advanced">${loc('portal_ruins_supressed')}:</span> <span class="has-text-caution">{{ on | filter('sup') }}</span>`;
-                return desc;
-            },
-            filter(v,type){
-                let sup = hellSupression('gate');
-                switch (type){
-                    case 'army':
-                        return Math.round(sup.rating);
-                    case 'sup':
-                        let supress = +(sup.supress * 100).toFixed(2);
-                        return `${supress}%`;
-                }
-            }
-        },
-        gate_mission: {
-            id: 'portal-gate_mission',
-            title: loc('portal_gate_mission_title'),
-            desc: loc('portal_gate_mission_title'),
-            reqs: { high_tech: 18 },
-            grant: ['hell_gate',1],
-            queue_complete(){ return global.tech.hell_gate >= 1 ? 0 : 1; },
-            cost: {
-                Money(){ return 250000000; },
-                Knowledge(){ return 27500000; }
-            },
-            effect: loc('portal_gate_mission_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('portal_gate_mission_result'),'info',false,['progress','hell']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        west_tower: {
-            id: 'portal-west_tower',
-            title: loc('portal_west_tower'),
-            desc(wiki){
-                let size = towerSize();
-                if (!global.portal.hasOwnProperty('west_tower') || global.portal.west_tower.count < size || wiki){
-                    return `<div>${loc('portal_west_tower')}</div><div class="has-text-special">${loc('requires_segmemts',[size])}</div>`;
-                }
-                else {
-                    return `<div>${loc('portal_west_tower')}</div>`;
-                }
-            },
-            reqs: { hell_gate: 2 },
-            queue_size: 25,
-            queue_complete(){ return towerSize() - global.portal.west_tower.count; },
-            cost: {
-                Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(10000000) : 0; },
-                Stone(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(100000) : 0; },
-                Uranium(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(1000) : 0; },
-                Adamantite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(18000) : 0; },
-                Vitreloy(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(25000) : 0; },
-                Soul_Gem(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? 1 : 0; },
-                Scarletite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(5000) : 0; },
-            },
-            effect(wiki){
-                let size = towerSize();
-                let count = (wiki || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0);
-                if (count < size){
-                    let remain = size - count;
-                    return `<div>${loc('portal_tower_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div><div class="has-text-caution">${loc('portal_tower_effect2')}</div>`;
-                }
-                else {
-                    return loc('portal_tower_effect');
-                }
-            },
-            action(){
-                if (global.portal.west_tower.count < towerSize() && payCosts($(this)[0])){
-                    incrementStruct('west_tower','portal');
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                if (global.portal.west_tower.count >= towerSize()){
-                    global.tech['wtower'] = 1;
-                    if (global.tech['wtower'] && global.tech['etower'] && !global.tech['hell_lake']){
-                        global.tech['hell_lake'] = 1;
-                        global.settings.portal.lake = true;
-                        global.portal['harbour'] = { count: 0, on: 0, support: 0, s_max: 0 };
-                        messageQueue(loc('portal_gate_open'),'info',false,['progress','hell']);
-                        renderFortress();
-                    }
-                }
-            }
-        },
-        east_tower: {
-            id: 'portal-east_tower',
-            title: loc('portal_east_tower'),
-            desc(wiki){
-                let size = towerSize();
-                if (!global.portal.hasOwnProperty('east_tower') || global.portal.east_tower.count < size || wiki){
-                    return `<div>${loc('portal_east_tower')}</div><div class="has-text-special">${loc('requires_segmemts',[size])}</div>`;
-                }
-                else {
-                    return `<div>${loc('portal_east_tower')}</div>`;
-                }
-            },
-            reqs: { hell_gate: 2 },
-            queue_size: 25,
-            queue_complete(){ return towerSize() - global.portal.east_tower.count; },
-            cost: {
-                Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(10000000) : 0; },
-                Stone(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(100000) : 0; },
-                Uranium(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(1000) : 0; },
-                Adamantite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(18000) : 0; },
-                Vitreloy(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(25000) : 0; },
-                Soul_Gem(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? 1 : 0; },
-                Scarletite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(5000) : 0; },
-            },
-            effect(wiki){
-                let size = towerSize();
-                let count = (wiki || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0);
-                if (count < size){
-                    let remain = size - count;
-                    return `<div>${loc('portal_tower_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div><div class="has-text-caution">${loc('portal_tower_effect2')}</div>`;
-                }
-                else {
-                    return loc('portal_tower_effect');
-                }
-            },
-            action(){
-                if (global.portal.east_tower.count < towerSize() && payCosts($(this)[0])){
-                    incrementStruct('east_tower','portal');
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                if (global.portal.east_tower.count >= towerSize()){
-                    global.tech['etower'] = 1;
-                    if (global.tech['wtower'] && global.tech['etower'] && !global.tech['hell_lake']){
-                        global.tech['hell_lake'] = 1;
-                        global.settings.portal.lake = true;
-                        global.portal['harbour'] = { count: 0, on: 0, support: 0, s_max: 0 };
-                        messageQueue(loc('portal_gate_open'),'info',false,['progress','hell']);
-                        renderFortress();
-                    }
-                }
-            }
-        },
-        gate_turret: {
-            id: 'portal-gate_turret',
-            title: loc('portal_gate_turret_title'),
-            desc(){
-                return `<div>${loc('portal_gate_turret_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_gate: 3 },
-            powered(){ return powerCostMod(6); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('gate_turret', offset, 3750000, 1.22, 'portal'); },
-                Iron(offset){ return spaceCostMultiplier('gate_turret', offset, 4250000, 1.22, 'portal'); },
-                Elerium(offset){ return spaceCostMultiplier('gate_turret', offset, 275, 1.22, 'portal'); },
-                Stanene(offset){ return spaceCostMultiplier('gate_turret', offset, 850000, 1.22, 'portal'); },
-            },
-            effect(){
-                let security = 100;
-                if (global.race['holy']){
-                    security *= 1 + (traits.holy.vars()[1] / 100);
-                }
-                let min = global.tech.hell_gun >= 2 ? 65 : 40;
-                let max = global.tech.hell_gun >= 2 ? 100 : 60;
-                return `<div>${loc('portal_gate_turret_effect',[Math.round(security)])}</div><div>${loc('portal_gate_turret_effect2',[min,max])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('gate_turret','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.gate_turret.on++;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            postPower(){
-                vBind({el: `#srprtl_gate`},'update');
-            }
-        },
-        infernite_mine: {
-            id: 'portal-infernite_mine',
-            title: loc('portal_infernite_mine_title'),
-            desc(){
-                return `<div>${loc('portal_infernite_mine_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_gate: 4 },
-            powered(){ return powerCostMod(5); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('infernite_mine', offset, 75000000, 1.26, 'portal'); },
-                Alloy(offset){ return spaceCostMultiplier('infernite_mine', offset, 2450000, 1.26, 'portal'); },
-                Orichalcum(offset){ return spaceCostMultiplier('infernite_mine', offset, 1650000, 1.26, 'portal'); },
-                Wrought_Iron(offset){ return spaceCostMultiplier('infernite_mine', offset, 680000, 1.26, 'portal'); },
-            },
-            effect(){                
-                let sup = hellSupression('gate');
-                let mining = 0.5 * sup.supress;
-                return `<div>${loc('portal_infernite_mine_effect',[+(mining).toFixed(3)])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('infernite_mine','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.infernite_mine.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-    },
-    prtl_lake: {
-        info: {
-            name: loc('portal_lake_name'),
-            desc: loc('portal_lake_desc'),
-            support: 'harbour',
-        },
-        lake_mission: {
-            id: 'portal-lake_mission',
-            title: loc('portal_lake_mission_title'),
-            desc: loc('portal_lake_mission_title'),
-            reqs: { hell_lake: 1 },
-            grant: ['hell_lake',2],
-            queue_complete(){ return global.tech.hell_lake >= 2 ? 0 : 1; },
-            cost: {
-                Money(){ return 500000000; },
-                Oil(){ return 750000; },
-                Helium_3(){ return 600000; }
-            },
-            effect: loc('portal_lake_mission_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('portal_lake_mission_result'),'info',false,['progress','hell']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        harbour: {
-            id: 'portal-harbour',
-            title: loc('portal_harbour_title'),
-            desc(){
-                return `<div>${loc('portal_harbour_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_lake: 3 },
-            powered(){
-                let factor = p_on['cooling_tower'] || 0;
-                return +(powerCostMod(500 * (0.92 ** factor))).toFixed(2);
-            },
-            support(){ return 1; },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('harbour', offset, 225000000, spireCreep(1.18), 'portal'); },
-                Cement(offset){ return spaceCostMultiplier('harbour', offset, 50000000, spireCreep(1.18), 'portal'); },
-                Iridium(offset){ return spaceCostMultiplier('harbour', offset, 7500000, spireCreep(1.18), 'portal'); },
-                Infernite(offset){ return spaceCostMultiplier('harbour', offset, 800000, spireCreep(1.18), 'portal'); },
-                Stanene(offset){ return spaceCostMultiplier('harbour', offset, 17500000, spireCreep(1.18), 'portal'); },
-            },
-            wide: true,
-            effect(){
-                let storage = '<div class="aTable">';
-                if (global.resource.Oil.display){
-                    let val = sizeApproximation(+(spatialReasoning(30000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Oil.name])}</span>`
-                }
-                if (global.resource.Alloy.display){
-                    let val = sizeApproximation(+(spatialReasoning(250000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Alloy.name])}</span>`
-                }
-                if (global.resource.Polymer.display){
-                    let val = sizeApproximation(+(spatialReasoning(250000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Polymer.name])}</span>`
-                }
-                if (global.resource.Iridium.display){
-                    let val = sizeApproximation(+(spatialReasoning(200000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Iridium.name])}</span>`
-                }
-                if (global.resource.Helium_3.display){
-                    let val = sizeApproximation(+(spatialReasoning(18000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Helium_3.name])}</span>`
-                }
-                if (global.resource.Deuterium.display){
-                    let val = sizeApproximation(+(spatialReasoning(12000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Deuterium.name])}</span>`
-                }
-                if (global.resource.Neutronium.display){
-                    let val = sizeApproximation(+(spatialReasoning(180000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Neutronium.name])}</span>`
-                }
-                if (global.resource.Adamantite.display){
-                    let val = sizeApproximation(+(spatialReasoning(150000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Adamantite.name])}</span>`
-                }
-                if (global.resource.Infernite.display){
-                    let val = sizeApproximation(+(spatialReasoning(75000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Infernite.name])}</span>`
-                }
-                if (global.resource.Nano_Tube.display){
-                    let val = sizeApproximation(+(spatialReasoning(750000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Nano_Tube.name])}</span>`
-                }
-                if (global.resource.Graphene.display){
-                    let val = sizeApproximation(+(spatialReasoning(1200000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Graphene.name])}</span>`
-                }
-                if (global.resource.Stanene.display){
-                    let val = sizeApproximation(+(spatialReasoning(1200000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Stanene.name])}</span>`
-                }
-                if (global.resource.Bolognium.display){
-                    let val = sizeApproximation(+(spatialReasoning(130000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Bolognium.name])}</span>`
-                }
-                if (global.resource.Orichalcum.display){
-                    let val = sizeApproximation(+(spatialReasoning(130000)).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Orichalcum.name])}</span>`
-                }
-                storage = storage + '</div>';
-                return `<div>${loc('portal_harbour_effect',[1])}</div>${storage}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('harbour','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.harbour.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        cooling_tower: {
-            id: 'portal-cooling_tower',
-            title: loc('portal_cooling_tower_title'),
-            desc(){
-                return `<div>${loc('portal_cooling_tower_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_lake: 6 },
-            powered(){ return powerCostMod(10); },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('cooling_tower', offset, 250000000, 1.2, 'portal'); },
-                Polymer(offset){ return spaceCostMultiplier('cooling_tower', offset, 12000000, 1.2, 'portal'); },
-                Orichalcum(offset){ return spaceCostMultiplier('cooling_tower', offset, 8500000, 1.2, 'portal'); },
-                Brick(offset){ return spaceCostMultiplier('cooling_tower', offset, 250000, 1.2, 'portal'); },
-            },
-            effect(){
-                return `<div>${loc('portal_cooling_tower_effect',[8])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('cooling_tower','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.cooling_tower.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        bireme: {
-            id: 'portal-bireme',
-            title: loc('portal_bireme_title'),
-            desc(){
-                return `<div>${loc('portal_bireme_title')}</div><div class="has-text-special">${loc('space_support',[loc('lake')])}</div>`;
-            },
-            reqs: { hell_lake: 4 },
-            powered(){ return powerCostMod(1); },
-            support(){ return -1; },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('bireme', offset, 190000000, 1.24, 'portal'); },
-                Helium_3(offset){ return spaceCostMultiplier('bireme', offset, 225000, 1.24, 'portal'); },
-                Adamantite(offset){ return spaceCostMultiplier('bireme', offset, 15000000, 1.24, 'portal'); },
-                Nano_Tube(offset){ return spaceCostMultiplier('bireme', offset, 18000000, 1.24, 'portal'); },
-                Soul_Gem(offset){ return spaceCostMultiplier('bireme', offset, 10, 1.24, 'portal'); },
-                Scarletite(offset){ return spaceCostMultiplier('bireme', offset, 125000, 1.24, 'portal'); },
-            },
-            effect(){
-                let rating = global.blood['spire'] && global.blood.spire >= 2 ? 20 : 15;
-                return `<div class="has-text-caution">${loc('space_used_support',[loc('lake')])}</div><div>${loc('portal_bireme_effect',[rating])}</div><div class="has-text-caution">${loc('galaxy_starbase_mil_crew',[$(this)[0].ship.mil()])}</div>`;
-            },
-            ship: {
-                civ(){ return 0; },
-                mil(){ return global.race['high_pop'] ? traits.high_pop.vars()[0] * 2 : 2; },
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('bireme','portal');
-                    if (global.portal.harbour.support < global.portal.harbour.s_max){
-                        global.portal.bireme.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        transport: {
-            id: 'portal-transport',
-            title: loc('portal_transport_title'),
-            desc(){
-                return `<div>${loc('portal_transport_title')}</div><div class="has-text-special">${loc('space_support',[loc('lake')])}</div>`;
-            },
-            reqs: { hell_lake: 5 },
-            powered(){ return powerCostMod(1); },
-            support(){ return -1; },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('transport', offset, 300000000, 1.22, 'portal'); },
-                Oil(offset){ return spaceCostMultiplier('transport', offset, 180000, 1.22, 'portal'); },
-                Alloy(offset){ return spaceCostMultiplier('transport', offset, 18000000, 1.22, 'portal'); },
-                Graphene(offset){ return spaceCostMultiplier('transport', offset, 12500000, 1.22, 'portal'); },
-                Soul_Gem(offset){ return spaceCostMultiplier('transport', offset, 5, 1.22, 'portal'); },
-                Scarletite(offset){ return spaceCostMultiplier('transport', offset, 250000, 1.22, 'portal'); },
-            },
-            effect(){
-                let rating = global.blood['spire'] && global.blood.spire >= 2 ? 0.8 : 0.85;
-                let bireme = +((rating ** (gal_on['bireme'] || 0)) * 100).toFixed(1);
-                return `<div class="has-text-caution">${loc('space_used_support',[loc('lake')])}</div><div>${loc('portal_transport_effect',[5])}</div><div class="has-text-danger">${loc('portal_transport_effect2',[bireme])}</div><div class="has-text-caution">${loc('galaxy_starbase_civ_crew',[$(this)[0].ship.civ()])}</div>`;
-            },
-            special: true,
-            sAction(){
-                global.settings.civTabs = 4;
-                global.settings.marketTabs = 3;
-                if (!global.settings.tabLoad){
-                    loadTab('mTabResource');
-                    clearPopper(`portal-transport`);
-                }
-            },
-            ship: {
-                civ(){ return global.race['high_pop'] ? traits.high_pop.vars()[0] * 3 : 3; },
-                mil(){ return 0; },
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('transport','portal');
-                    if (global.portal.harbour.support < global.portal.harbour.s_max){
-                        global.portal.transport.on++;
-                    }
-                    if (!global.settings.portal.spire){
-                        global.settings.portal.spire = true;
-                        global.settings.showCargo = true;
-                        clearElement($('#resources'));
-                        defineResources();
-                        global.tech['hell_spire'] = 1;
-                        global.portal['purifier'] = { count: 0, on: 0, support: 0, s_max: 0, supply: 0, sup_max: 100, diff: 0 };
-                        global.portal['port'] = { count: 0, on: 0 };
-                        messageQueue(loc('portal_transport_unlocked'),'info',false,['progress','hell']);
-                        renderFortress();
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-    },
-    prtl_spire: {
-        info: {
-            name: loc('portal_spire_name'),
-            desc: loc('portal_spire_desc'),
-            support: 'purifier',
-            prop(){
-                let desc = ` - <span class="has-text-advanced">${loc('portal_spire_supply')}:</span> <span class="has-text-caution">{{ supply | filter }} / {{ sup_max }}</span>`;
-                return desc + ` (<span class="has-text-success">+{{ diff | filter(2) }}/s</span>)`;
-            },
-            filter(v,fix){
-                return fix ? +(v).toFixed(fix) : Math.floor(v);
-            }
-        },
-        spire_mission: {
-            id: 'portal-spire_mission',
-            title: loc('portal_spire_mission_title'),
-            desc: loc('portal_spire_mission_title'),
-            reqs: { hell_spire: 1 },
-            grant: ['hell_spire',2],
-            queue_complete(){ return global.tech.hell_spire >= 2 ? 0 : 1; },
-            cost: {
-                Species(){ return popCost(50); },
-                Oil(){ return 900000; },
-                Helium_3(){ return 750000; },
-                Structs(){
-                    return {
-                        portal: {
-                            bireme: { s: 'prtl_lake', count: 1, on: 1 },
-                            transport: { s: 'prtl_lake', count: 1, on: 1 },
+                        incrementStruct('turret','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.turret.on++;
+                            p_on['turret']++;
+                            vBind({el: `#fort`},'update');
                         }
-                    };
-                }
-            },
-            effect: loc('portal_spire_mission_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('portal_spire_mission_result'),'info',false,['progress','hell']);
-                    return true;
-                }
-                return false;
-            },
-            flair: loc('portal_spire_mission_flair'),
-        },
-        purifier: {
-            id: 'portal-purifier',
-            title: loc('portal_purifier_title'),
-            desc(){
-                return `<div>${loc('portal_purifier_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { hell_spire: 3 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('purifier', offset, 85000000, spireCreep(1.15), 'portal'); },
-                Supply(offset){ return global.portal['purifier'] && global.portal.purifier.count === 0 ? 100 : spaceCostMultiplier('purifier', offset, 4200, spireCreep(1.2), 'portal'); },
-            },
-            powered(){ return powerCostMod(125); },
-            support(){ return global.tech['b_stone'] && global.tech.b_stone >= 3 ? 1.25 : 1; },
-            effect(){
-                return `<div>${loc('portal_purifier_effect',[$(this)[0].support()])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('purifier','portal');
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.portal.purifier.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        port: {
-            id: 'portal-port',
-            title: loc('portal_port_title'),
-            desc(){
-                return `<div>${loc('portal_port_title')}</div><div class="has-text-special">${loc('portal_spire_support')}</div>`;
-            },
-            reqs: { hell_spire: 3 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('port', offset, 135000000, spireCreep(1.2), 'portal'); },
-                Supply(offset){ return global.portal.hasOwnProperty('port') && global.portal.port.count === 0 ? 100 : spaceCostMultiplier('port', offset, 6250, spireCreep(1.2), 'portal'); },
-            },
-            powered(){ return powerCostMod(1); },
-            support(){ return -1; },
-            effect(){
-                let port_value = 10000;
-                if (spire_on['base_camp']){
-                    port_value *= 1 + (spire_on['base_camp'] * 0.4);
-                }
-                return `<div class="has-text-caution">${loc('portal_port_effect1',[$(this)[0].support()])}</div><div>${loc('portal_port_effect2',[Math.round(port_value)])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('port','portal');
-                    if (global.portal.purifier.support < global.portal.purifier.s_max){
-                        global.portal.port.on++;
-                    }
-                    if (global.tech.hell_spire === 3){
-                        global.tech.hell_spire = 4;
-                        global.portal['base_camp'] = { count: 0, on: 0 };
-                        renderFortress();
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        base_camp: {
-            id: 'portal-base_camp',
-            title: loc('portal_base_camp_title'),
-            desc(){
-                return `<div>${loc('portal_base_camp_title')}</div><div class="has-text-special">${loc('portal_spire_support')}</div>`;
-            },
-            reqs: { hell_spire: 4 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('base_camp', offset, 425000000, spireCreep(1.2), 'portal'); },
-                Supply(offset){ return spaceCostMultiplier('base_camp', offset, 50000, spireCreep(1.2), 'portal'); },
-            },
-            powered(){ return powerCostMod(1); },
-            support(){ return -1; },
-            effect(){
-                return `<div class="has-text-caution">${loc('portal_port_effect1',[$(this)[0].support()])}</div><div>${loc('portal_base_camp_effect',[40])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('base_camp','portal');
-                    if (global.portal.purifier.support < global.portal.purifier.s_max){
-                        global.portal.base_camp.on++;
-                    }
-                    if (global.tech.hell_spire === 4){
-                        global.tech.hell_spire = 5;
-                        global.portal['bridge'] = { count: 0 };
-                        messageQueue(loc('portal_spire_bridge_collapse'),'info',false,['progress','hell']);
-                        renderFortress();
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        bridge: {
-            id: 'portal-bridge',
-            title: loc('portal_bridge_title'),
-            desc(wiki){
-                if (!global.portal.hasOwnProperty('bridge') || global.portal.bridge.count < 10 || wiki){
-                    return `<div>${loc('portal_bridge_title')}</div><div class="has-text-special">${loc('requires_segmemts',[10])}</div>`;
-                }
-                else {
-                    return `<div>${loc('portal_bridge_title')}</div>`;
-                }
-            },
-            reqs: { hell_spire: 5 },
-            queue_size: 1,
-            queue_complete(){ return 10 - global.portal.bridge.count; },
-            cost: {
-                Species(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0)) < 10 ? popCost(10) : 0; },
-                Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0)) < 10 ? 500000000 : 0; },
-                Supply(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0)) < 10 ? 100000 : 0; },
-            },
-            effect(wiki){
-                let size = 10;
-                let count = (wiki || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0);
-                if (count < size){
-                    let remain = size - count;
-                    return `<div>${loc('portal_bridge_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div><div class="has-text-caution">${loc('portal_bridge_effect2')}</div>`;
-                }
-                else {
-                    return loc('portal_bridge_complete');
-                }
-            },
-            action(){
-                if (global.portal.bridge.count < 10 && payCosts($(this)[0])){
-                    incrementStruct('bridge','portal');
-                    if (global.portal.bridge.count >= 10){
-                        global.portal['sphinx'] = { count: 0 };
-                        global.tech.hell_spire = 6;
-                        renderFortress();
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        sphinx: {
-            id: 'portal-sphinx',
-            title(){ return global.tech.hell_spire === 7 ? loc('portal_sphinx_solve') : loc('portal_sphinx_title'); },
-            desc: loc('portal_sphinx_desc'),
-            reqs: { hell_spire: 6 },
-            queue_complete(){ return 8 - global.tech.hell_spire; },
-            cost: {
-                Knowledge(offset){
-                    let count = (offset || 0) + (!global.tech['hell_spire'] || global.tech.hell_spire < 7 ? 0 : global.tech.hell_spire === 7 ? 1 : 2);
-                    return count === 1 ? 50000000 : count === 0 ? 40000000 : 0;
-                }
-            },
-            effect(wiki){
-                let count = (wiki || 0) + (!global.tech['hell_spire'] || global.tech.hell_spire < 7 ? 0 : global.tech.hell_spire === 7 ? 1 : 2);
-                if (count === 1){
-                    return loc('portal_sphinx_effect2');
-                }
-                else if (count === 2){
-                    return loc('portal_sphinx_effect3');
-                }
-                return loc('portal_sphinx_effect');
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    if (global.tech.hell_spire === 6){
-                        global.tech.hell_spire = 7;
-                        messageQueue(loc('portal_sphinx_msg'),'info',false,['progress','hell']);
-                        renderFortress();
                         return true;
                     }
-                    else if (global.tech.hell_spire === 7){
-                        global.tech.hell_spire = 8;
-                        renderFortress();
-                        messageQueue(loc('portal_sphinx_answer_msg'),'info',false,['progress','hell']);  
+                    return false;
+                }
+            },
+            carport: {
+                id: 'portal-carport',
+                title: loc('portal_carport_title'),
+                desc(){
+                    return loc('portal_carport_desc',[1]);
+                },
+                reqs: { portal: 2 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('carport', offset, 250000, 1.3, 'portal'); },
+                    Cement(offset){ return spaceCostMultiplier('carport', offset, 18000, 1.3, 'portal'); },
+                    Oil(offset){ return spaceCostMultiplier('carport', offset, 6500, 1.3, 'portal'); },
+                    Plywood(offset){ return spaceCostMultiplier('carport', offset, 8500, 1.3, 'portal'); }
+                },
+                repair(){
+                    let repair = 180;
+                    if (p_on['repair_droid']){
+                        repair *= 0.92 ** p_on['repair_droid'];
+                    }
+                    return Math.round(repair);
+                },
+                effect(){
+                    return `${loc('portal_carport_effect',[1])}`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('carport','portal');
+                        global.civic.hell_surveyor.display = true;
+                        global.resource.Infernite.display = true;
+                        if (!global.tech['infernite']){
+                            global.tech['infernite'] = 1;
+                            drawTech();
+                        }
                         return true;
                     }
+                    return false;
                 }
-                return false;
-            }
+            },
+            war_droid: {
+                id: 'portal-war_droid',
+                title: loc('portal_war_droid_title'),
+                desc(){
+                    return `<div>${loc('portal_war_droid_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { portal: 5 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('war_droid', offset, 495000, 1.26, 'portal'); },
+                    Neutronium(offset){ return spaceCostMultiplier('war_droid', offset, 1250, 1.26, 'portal'); },
+                    Elerium(offset){ return spaceCostMultiplier('war_droid', offset, 18, 1.26, 'portal'); },
+                    Stanene(offset){ return spaceCostMultiplier('war_droid', offset, 37500, 1.26, 'portal'); },
+                    Soul_Gem(offset){ return spaceCostMultiplier('war_droid', offset, 1, 1.26, 'portal'); }
+                },
+                powered(){ return powerCostMod(2); },
+                effect(){
+                    return `<div>${loc('portal_war_droid_effect')}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('war_droid','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.war_droid.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                flair: loc('portal_war_droid_flair')
+            },
+            repair_droid: {
+                id: 'portal-repair_droid',
+                title: loc('portal_repair_droid_title'),
+                desc(){
+                    return `<div>${loc('portal_repair_droid_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { portal: 6 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('repair_droid', offset, 444000, 1.26, 'portal'); },
+                    Iron(offset){ return spaceCostMultiplier('repair_droid', offset, 88000, 1.26, 'portal'); },
+                    Iridium(offset){ return spaceCostMultiplier('repair_droid', offset, 17616, 1.26, 'portal'); },
+                    Infernite(offset){ return spaceCostMultiplier('repair_droid', offset, 666, 1.26, 'portal'); },
+                    Soul_Gem(offset){ return spaceCostMultiplier('repair_droid', offset, 1, 1.15, 'portal'); }
+                },
+                powered(){ return powerCostMod(3); },
+                effect(){
+                    return `<div>${loc('portal_repair_droid_effect',[5])}</div><div>${loc('portal_repair_droid_effect2',[8])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('repair_droid','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.repair_droid.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                flair: loc('portal_repair_droid_flair')
+            },
         },
-        bribe_sphinx: {
-            id: 'portal-bribe_sphinx',
-            title: loc('portal_sphinx_bribe'),
-            desc: loc('portal_sphinx_desc'),
-            reqs: { hell_spire: 7 },
-            condition(){
-                return global.tech['hell_spire'] && global.tech.hell_spire === 7 && !global.tech['sphinx_bribe'] ? true : false;
+        prtl_badlands: {
+            info: {
+                name: loc('portal_badlands_name'),
+                desc: loc('portal_badlands_desc'),
             },
-            cost: {
-                Soul_Gem(){ return 250; },
-                Supply(){ return 500000; }
-            },
-            effect(){
-                return loc('portal_sphinx_bribe_effect');
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    if (global.tech.hell_spire === 7 && !global.tech['sphinx_bribe']){
-                        global.tech['sphinx_bribe'] = 1;
-                        global.resource.Codex.display = true;
-                        global.resource.Codex.amount = 1;
-                        messageQueue(loc('portal_sphinx_bribe_msg'),'info',false,['progress','hell']);                        
+            war_drone: {
+                id: 'portal-war_drone',
+                title: loc('portal_war_drone_title'),
+                desc(){
+                    return `<div>${loc('portal_war_drone_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { portal: 3 },
+                powered(){ return powerCostMod(5); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('war_drone', offset, 650000, 1.28, 'portal'); },
+                    Alloy(offset){ return spaceCostMultiplier('war_drone', offset, 60000, 1.28, 'portal'); },
+                    Graphene(offset){ return spaceCostMultiplier('war_drone', offset, 100000, 1.28, 'portal'); },
+                    Elerium(offset){ return spaceCostMultiplier('war_drone', offset, 25, 1.28, 'portal'); },
+                    Soul_Gem(offset){ return spaceCostMultiplier('war_drone', offset, 1, 1.28, 'portal'); }
+                },
+                effect(){
+                    return `<div>${loc('portal_war_drone_effect')}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('war_drone','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.war_drone.on++;
+                        }
                         return true;
                     }
-                }
-                return false;
+                    return false;
+                },
+                flair: loc('portal_war_drone_flair')
             },
-            post(){
-                if (global.tech['sphinx_bribe']){
+            sensor_drone: {
+                id: 'portal-sensor_drone',
+                title: loc('portal_sensor_drone_title'),
+                desc(){
+                    return `<div>${loc('portal_sensor_drone_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { infernite: 2 },
+                powered(){ return powerCostMod(3); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('sensor_drone', offset, 500000, 1.25, 'portal'); },
+                    Polymer(offset){ return spaceCostMultiplier('sensor_drone', offset, 25000, 1.25, 'portal'); },
+                    Adamantite(offset){ return spaceCostMultiplier('sensor_drone', offset, 12500, 1.25, 'portal'); },
+                    Infernite(offset){ return spaceCostMultiplier('sensor_drone', offset, 100, 1.25, 'portal'); }
+                },
+                effect(){
+                    let bonus = global.tech.infernite >= 4 ? (global.tech.infernite >= 6 ? 50 : 20) : 10;
+                    let know = global.tech.infernite >= 6 ? 2500 : 1000;
+                    let sci_bonus = global.race['cataclysm'] ? `<div>${loc('space_moon_observatory_cata_effect',[2])}</div>` : `<div>${loc('space_moon_observatory_effect',[2])}</div><div>${loc('portal_sensor_drone_effect2',[2])}</div>`;
+                    let sci = global.tech['science'] >= 14 ? `<div>${loc('city_max_knowledge',[know])}</div>${sci_bonus}` : '';
+                    return `<div>${loc('portal_sensor_drone_effect',[bonus])}</div>${sci}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('sensor_drone','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.sensor_drone.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            attractor: {
+                id: 'portal-attractor',
+                title: loc('portal_attractor_title'),
+                desc(){
+                    return `<div>${loc('portal_attractor_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { portal: 4 },
+                powered(){ return powerCostMod(3); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('attractor', offset, 350000, 1.25, 'portal'); },
+                    Aluminium(offset){ return spaceCostMultiplier('attractor', offset, 175000, 1.25, 'portal'); },
+                    Stanene(offset){ return spaceCostMultiplier('attractor', offset, 90000, 1.25, 'portal'); },
+                },
+                effect(){
+                    return `<div>${loc('portal_attractor_effect1')}</div><div>${loc('portal_attractor_effect2',[global.resource.Soul_Gem.name])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('attractor','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.attractor.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+        },
+        prtl_pit: {
+            info: {
+                name: loc('portal_pit_name'),
+                desc: loc('portal_pit_desc'),
+            },
+            pit_mission: {
+                id: 'portal-pit_mission',
+                title: loc('portal_pit_mission_title'),
+                desc: loc('portal_pit_mission_title'),
+                reqs: { hell_pit: 1 },
+                grant: ['hell_pit',2],
+                queue_complete(){ return global.tech.hell_pit >= 2 ? 0 : 1; },
+                cost: {
+                    Money(){ return 5000000; },
+                    Helium_3(){ return 300000; },
+                    Deuterium(){ return 200000; }
+                },
+                effect: loc('portal_pit_mission_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('portal_pit_mission_result'),'info',false,['progress','hell']);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            assault_forge: {
+                id: 'portal-assault_forge',
+                title: loc('portal_assault_forge_title'),
+                desc: loc('portal_assault_forge_title'),
+                reqs: { hell_pit: 2 },
+                grant: ['hell_pit',3],
+                queue_complete(){ return global.tech.hell_pit >= 3 ? 0 : 1; },
+                cost: {
+                    Money(){ return 10000000; },
+                    HellArmy(){
+                        return Math.round(650 / armyRating(1,'hellArmy'));
+                    },
+                    Cement(){ return 10000000; },
+                    Adamantite(){ return 1250000; },
+                    Elerium(){ return 2400; },
+                    Stanene(){ return 900000; }
+                },
+                effect: loc('portal_assault_forge_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('portal_assault_forge_result'),'info',false,['progress','hell']);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            soul_forge: {
+                id: 'portal-soul_forge',
+                title: loc('portal_soul_forge_title'),
+                desc(){
+                    return `<div>${loc('portal_soul_forge_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_pit: 4 },
+                queue_complete(){ return 1 - global.portal.soul_forge.count; },
+                powered(){ return powerCostMod(30); },
+                postPower(o){
+                    vBind({el: `#fort`},'update');
+                },
+                cost: {
+                    Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 25000000 : 0; },
+                    Graphene(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 1500000 : 0; },
+                    Infernite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 25000 : 0; },
+                    Bolognium(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0)) < 1 ? 100000 : 0; },
+                },
+                effect(wiki){
+                    let desc = `<div>${loc('portal_soul_forge_effect',[global.resource.Soul_Gem.name])}</div>`;
+                    let count = (wiki || 0) + (global.portal.hasOwnProperty('soul_forge') ? global.portal.soul_forge.count : 0);
+                    if (count >= 1){
+                        let cap = global.tech.hell_pit >= 6 ? 750000 : 1000000;
+                        if (global.tech.hell_pit >= 7 && p_on['soul_attractor'] > 0){
+                            cap *= 0.97 ** p_on['soul_attractor'];
+                        }
+                        desc = desc + `<div>${loc('portal_soul_forge_effect2',[global.portal['soul_forge'] ? global.portal.soul_forge.kills.toLocaleString() : 0,Math.round(cap).toLocaleString()])}</div>`;
+                    }
+                    let soldiers = soulForgeSoldiers();
+                    return `${desc}<div><span class="has-text-caution">${loc('portal_soul_forge_soldiers',[soldiers])}</span>, <span class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</span></div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        if (global.portal.soul_forge.count < 1){
+                            incrementStruct('soul_forge','portal');
+                            if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                                global.portal.soul_forge.on++;
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            },
+            gun_emplacement: {
+                id: 'portal-gun_emplacement',
+                title: loc('portal_gun_emplacement_title'),
+                desc(){
+                    return `<div>${loc('portal_gun_emplacement_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_gun: 1 },
+                powered(){ return powerCostMod(3); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('gun_emplacement', offset, 4000000, 1.25, 'portal'); },
+                    Coal(offset){ return spaceCostMultiplier('gun_emplacement', offset, 250000, 1.25, 'portal'); },
+                    Steel(offset){ return spaceCostMultiplier('gun_emplacement', offset, 1200000, 1.25, 'portal'); },
+                    Wrought_Iron(offset){ return spaceCostMultiplier('gun_emplacement', offset, 200000, 1.25, 'portal'); },
+                },
+                effect(){
+                    let soldiers = global.tech.hell_gun >= 2 ? 2 : 1;
+                    let min = global.tech.hell_gun >= 2 ? 35 : 20;
+                    let max = global.tech.hell_gun >= 2 ? 75 : 40;
+                    return `<div>${loc('portal_gun_emplacement_effect',[soldiers])}</div><div>${loc('portal_gun_emplacement_effect2',[min,max])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('gun_emplacement','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.gun_emplacement.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            soul_attractor: {
+                id: 'portal-soul_attractor',
+                title: loc('portal_soul_attractor_title'),
+                desc(){
+                    return `<div>${loc('portal_soul_attractor_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_pit: 5 },
+                powered(){ return powerCostMod(4); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('soul_attractor', offset, 12000000, 1.25, 'portal'); },
+                    Stone(offset){ return spaceCostMultiplier('soul_attractor', offset, 23000000, 1.25, 'portal'); },
+                    Nano_Tube(offset){ return spaceCostMultiplier('soul_attractor', offset, 314159, 1.25, 'portal'); },
+                    Vitreloy(offset){ return spaceCostMultiplier('soul_attractor', offset, 1618, 1.25, 'portal'); },
+                    Aerogel(offset){ return spaceCostMultiplier('soul_attractor', offset, 180000, 1.25, 'portal'); },
+                },
+                effect(){
+                    let link = global.tech.hell_pit >= 7 ? `<div>${loc('portal_soul_attractor_effect2',[3])}</div>` : ``;
+                    let attact = global.blood['attract'] ? global.blood.attract * 5 : 0;
+                    return `<div>${loc('portal_soul_attractor_effect',[40 + attact, 120 + attact])}</div>${link}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('soul_attractor','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.soul_attractor.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+        },
+        prtl_ruins: {
+            info: {
+                name: loc('portal_ruins_name'),
+                desc: loc('portal_ruins_desc'),
+                support: 'guard_post',
+                prop(){
+                    let desc = ` - <span class="has-text-advanced">${loc('portal_ruins_security')}:</span> <span class="has-text-caution">{{ on | filter('army') }}</span>`;
+                    desc = desc + ` - <span class="has-text-advanced">${loc('portal_ruins_supressed')}:</span> <span class="has-text-caution">{{ on | filter('sup') }}</span>`;
+                    return desc;
+                },
+                filter(v,type){
+                    let sup = hellSupression('ruins');
+                    switch (type){
+                        case 'army':
+                            return Math.round(sup.rating);
+                        case 'sup':
+                            let supress = +(sup.supress * 100).toFixed(2);
+                            return `${supress}%`;
+                    }
+                }
+            },
+            ruins_mission: {
+                id: 'portal-ruins_mission',
+                title: loc('portal_ruins_mission_title'),
+                desc: loc('portal_ruins_mission_title'),
+                reqs: { hell_ruins: 1 },
+                grant: ['hell_ruins',2],
+                queue_complete(){ return global.tech.hell_ruins >= 2 ? 0 : 1; },
+                cost: {
+                    Money(){ return 100000000; },
+                    Oil(){ return 500000; },
+                    Helium_3(){ return 500000; }
+                },
+                effect: loc('portal_ruins_mission_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('portal_ruins_mission_result'),'info',false,['progress','hell']);
+                        global.portal['vault'] = { count: 0 };
+                        global.portal['stonehedge'] = { count: 0 };
+                        global.portal['archaeology'] = { count: 0, on: 0 };
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            guard_post: {
+                id: 'portal-guard_post',
+                title: loc('portal_guard_post_title'),
+                desc(){
+                    return `<div>${loc('portal_guard_post_title')}</div><div class="has-text-special">${loc('requires_soldiers')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_ruins: 2 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('guard_post', offset, 8000000, 1.06, 'portal'); },
+                    Lumber(offset){ return spaceCostMultiplier('guard_post', offset, 6500000, 1.06, 'portal'); },
+                    Sheet_Metal(offset){ return spaceCostMultiplier('guard_post', offset, 300000, 1.06, 'portal'); },
+                },
+                powered(){ return powerCostMod(5); },
+                support(){ return 1; },
+                effect(){
+                    let holy = global.race['holy'] ? 1 + (traits.holy.vars()[1] / 100) : 1;
+                    let rating = Math.round(holy * armyRating(jobScale(1),'hellArmy',0));
+                    return `<div>${loc('portal_guard_post_effect1',[rating])}</div><div class="has-text-caution">${loc('portal_guard_post_effect2',[jobScale(1),$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('guard_post','portal');
+                        global.portal.guard_post.on++;
+                        return true;
+                    }
+                    return false;
+                },
+                postPower(){
+                    vBind({el: `#srprtl_ruins`},'update');
+                    vBind({el: `#srprtl_gate`},'update');
+                }
+            },
+            vault: {
+                id: 'portal-vault',
+                title: loc('portal_vault_title'),
+                desc: loc('portal_vault_title'),
+                reqs: { hell_ruins: 2, hell_vault: 1 },
+                condition(){
+                    return global.portal.vault.count >= 2 ? false : true;
+                },
+                queue_complete(){ return 2 - global.portal.vault.count; },
+                cost: {
+                    Soul_Gem(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 0 ? 100 : 0; },
+                    Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 1 ? 250000000 : 0; },
+                    Adamantite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 1 ? 12500000 : 0; },
+                    Orichalcum(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0)) === 1 ? 30000000 : 0; },
+                },
+                effect(wiki){
+                    let count = (wiki || 0) + (global.portal.hasOwnProperty('vault') ? global.portal.vault.count : 0);
+                    return count < 1 ? loc('portal_vault_effect',[100]) : loc('portal_vault_effect2'); },
+                action(){
+                    if (global.portal.vault.count < 2 && payCosts($(this)[0])){
+                        incrementStruct('vault','portal');
+                        if (global.portal.vault.count === 2){
+                            global.tech.hell_ruins = 3;
+                            global.resource.Codex.display = true;
+                            global.resource.Codex.amount = 1;
+                            messageQueue(loc('portal_vault_result'),'info',false,['progress','hell']);
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    if (global.portal.vault.count === 2){
+                        drawTech();
+                        renderFortress();
+                        clearPopper();
+                    }
+                }
+            },
+            archaeology: {
+                id: 'portal-archaeology',
+                title: loc('portal_archaeology_title'),
+                desc(){
+                    return `<div>${loc('portal_archaeology_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_ruins: 2 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('archaeology', offset, 100000000, 1.25, 'portal'); },
+                    Titanium(offset){ return spaceCostMultiplier('archaeology', offset, 3750000, 1.25, 'portal'); },
+                    Mythril(offset){ return spaceCostMultiplier('archaeology', offset, 1250000, 1.25, 'portal'); },
+                },
+                powered(){ return powerCostMod(8); },
+                effect(){
+                    return `<div>${loc('portal_archaeology_effect',[jobScale(2)])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('archaeology','portal');
+                        global.civic.archaeologist.display = true;
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.portal.archaeology.on++;
+                            if (global.civic[global.civic.d_job].workers > 0){
+                                let hired = global.civic[global.civic.d_job].workers - jobScale(2) < 0 ? global.civic[global.civic.d_job].workers : jobScale(2);
+                                global.civic[global.civic.d_job].workers -= hired;
+                                global.civic.archaeologist.workers += hired;
+                            }
+                        }  
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            arcology: {
+                id: 'portal-arcology',
+                title: loc('portal_arcology_title'),
+                desc(){
+                    return `<div>${loc('portal_arcology_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { housing: 4 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('arcology', offset, 180000000, 1.22, 'portal'); },
+                    Graphene(offset){ return spaceCostMultiplier('arcology', offset, 7500000, 1.22, 'portal'); },
+                    Bolognium(offset){ return spaceCostMultiplier('arcology', offset, 2800000, 1.22, 'portal'); },
+                    Orichalcum(offset){ return spaceCostMultiplier('arcology', offset, 5500000, 1.22, 'portal'); },
+                    Nanoweave(offset){ return spaceCostMultiplier('arcology', offset, 650000, 1.22, 'portal'); },
+                    Horseshoe(){ return global.race['hooved'] ? 13 : 0; }
+                },
+                powered(){ return powerCostMod(25); },
+                effect(){
+                    let sup = hellSupression('ruins');
+                    let vault = spatialReasoning(bank_vault() * 8 * sup.supress);
+                    vault = +(vault).toFixed(0);
+                    let containers = Math.round(quantum_level) * 10;
+                    let container_string = `<div>${loc('plus_max_resource',[containers,loc('resource_Crates_name')])}</div><div>${loc('plus_max_resource',[containers,loc('resource_Containers_name')])}</div>`;
+                    return `<div>${loc('plus_max_resource',[`\$${vault.toLocaleString()}`,loc('resource_Money_name')])}</div><div>${loc('plus_max_citizens',[$(this)[0].citizens()])}</div><div>${loc('plus_max_resource',[jobScale(5),loc('civics_garrison_soldiers')])}</div><div>${loc('portal_guard_post_effect1',[75])}</div>${container_string}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('arcology','portal');
+                        if (global.city.power >= $(this)[0].powered()){
+                            global['resource'][global.race.species].max += 8;
+                            global.portal.arcology.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    vBind({el: `#srprtl_ruins`},'update');
                     drawTech();
-                    renderFortress();
-                    clearPopper('portal-bribe_sphinx');
-                }
-            }
-        },
-        spire_survey: {
-            id: 'portal-spire_survey',
-            title: loc('portal_spire_survey_title'),
-            desc: loc('portal_spire_survey_title'),
-            reqs: { hell_spire: 8 },
-            grant: ['hell_spire',9],
-            queue_complete(){ return global.tech.hell_spire >= 9 ? 0 : 1; },
-            cost: {
-                Oil(){ return 1200000; },
-                Helium_3(){ return 900000; },
-            },
-            effect: loc('portal_spire_survey_effect'),
-            action(){
-                if (payCosts($(this)[0])){
-                    global.portal['mechbay'] = { count: 0, on: 0, bay: 0, max: 0, active: 0, scouts: 0, mechs: [] };
-                    global.portal['spire'] = { count: 1, progress: 0, boss: '', type: '', status: {} };
-                    genSpireFloor();
-                    messageQueue(loc('portal_spire_survey_msg'),'info',false,['progress','hell']);
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                if (global.tech['hell_spire'] && global.tech.hell_spire === 9){
-                    renderFortress();
-                    clearPopper('portal-spire_survey');
-                }
-            }
-        },
-        mechbay: {
-            id: 'portal-mechbay',
-            title: loc('portal_mechbay_title'),
-            desc(){
-                return `<div>${loc('portal_mechbay_title')}</div><div class="has-text-special">${loc('portal_spire_support')}</div>`;
-            },
-            reqs: { hell_spire: 9 },
-            cost: {
-                Money(offset){ return spaceCostMultiplier('mechbay', offset, 100000000, 1.2, 'portal'); },
-                Supply(offset){ return spaceCostMultiplier('mechbay', offset, 250000, 1.2, 'portal'); },
-            },
-            powered(){ return powerCostMod(1); },
-            support(){ return -1; },
-            special: true,
-            sAction(){
-                global.settings.civTabs = 2;
-                global.settings.govTabs = 4;
-                if (!global.settings.tabLoad){
-                    loadTab('mTabCivic');
-                    clearPopper(`portal-mechbay`);
-                }
-            },
-            effect(){
-                let bay = global.portal.hasOwnProperty('mechbay') ? global.portal.mechbay.bay : 0;
-                let max = global.portal.hasOwnProperty('mechbay') ? global.portal.mechbay.max : 0;
-                return `<div class="has-text-caution">${loc('portal_port_effect1',[$(this)[0].support()])}</div><div>${loc('portal_mechbay_effect')}</div><div>${loc('portal_mechbay_effect2',[bay,max])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    incrementStruct('mechbay','portal');
-                    if (global.portal.purifier.support < global.portal.purifier.s_max){
-                        global.portal.mechbay.on++;
-                        global.portal.mechbay.max += 25;
-                    }
-                    global.settings.showMechLab = true;
-                    if (global.portal.mechbay.count === 1){
-                        messageQueue(loc('portal_mechbay_unlocked'),'info',false,['progress','hell']);
-                        drawMechLab();
-                    }
-                    return true;
-                }
-                return false;
-            },
-            postPower(){
-                updateMechbay();
-            }
-        },
-        spire: {
-            id: 'portal-spire',
-            title: loc('portal_spire_title'),
-            desc: loc('portal_spire_title'),
-            reqs: { hell_spire: 9 },
-            queue_complete(){ return 0; },
-            cost: {},
-            effect(){
-                let floor = global.portal.hasOwnProperty('spire') ? global.portal.spire.count : 0;
-                let terrain = global.portal.hasOwnProperty('spire') ? `<span class="has-text-warning">${loc(`portal_spire_type_${global.portal.spire.type}`)}</span>` : '?';
-                let status = ``;
-                if (global.portal.hasOwnProperty('spire') && Object.keys(global.portal.spire.status).length > 0){
-                    status = `<div>${loc('portal_spire_hazard',[Object.keys(global.portal.spire.status).map(v => `<span class="has-text-warning">${loc(`portal_spire_status_${v}`)}</span>`).join(', ')])}</div>`;
-                }
-                let progress = global.portal.hasOwnProperty('spire') ? `<span class="has-text-warning">${+(global.portal.spire.progress).toFixed(3)}%</span>` : '0%';
-                let leftSide = `<div>${loc('portal_spire_effect',[floor])}</div><div>${loc('portal_spire_type',[terrain])}</div>${status}<div>${loc('portal_spire_progress',[progress])}</div>`;
-                
-                let boss = global.portal.hasOwnProperty('spire') ? global.portal.spire.boss : 'crazed';
-                let threat = `<div>${loc('portal_spire_mob',[`<span class="has-text-danger">${loc(`portal_mech_boss_${boss}`)}</span>`])}</div>`;
-
-                let weak = `???`;
-                let resist = `???`;
-                if (global.stats['spire']){
-                    let resists = bossResists(boss);
-                    let level = $(this)[0].mscan();
-                    if (level > 0){
-                        weak = loc(`portal_mech_weapon_${resists.w}`);
-                    }
-                    if (level >= 5){
-                        resist = loc(`portal_mech_weapon_${resists.r}`);
-                    }
-                }
-                let rightSide = `<div>${threat}<div>${loc('portal_spire_mob_weak',[`<span class="has-text-warning">${weak}</span>`])}</div><div>${loc('portal_spire_mob_resist',[`<span class="has-text-warning">${resist}</span>`])}</div></div>`;
-
-                return `<div class="split"><div>${leftSide}</div><div>${rightSide}</div></div>`;
-            },
-            mscan(){
-                let level = 0;
-                Object.keys(global.stats.spire).forEach(function(uni){
-                    let boss = global.portal.hasOwnProperty('spire') ? global.portal.spire.boss : 'crazed';
-                    if (global.stats.spire.hasOwnProperty(uni) && global.stats.spire[uni].hasOwnProperty(boss) && global.stats.spire[uni][boss] > level){
-                        level = global.stats.spire[uni][boss];
-                    }
-                });
-                return level;
-            },
-            wide: true,
-            action(){
-                return false;
-            }
-        },
-        waygate: {
-            id: 'portal-waygate',
-            title: loc('portal_waygate_title'),
-            desc(wiki){
-                if (!global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) || wiki){
-                    return `<div>${loc('portal_waygate_title')}</div><div class="has-text-special">${loc('requires_segmemts',[10])}</div>`;
-                }
-                else {
-                    return `<div>${loc('portal_waygate_title')}</div>`;
-                }
-            },
-            reqs: { waygate: 1 },
-            queue_size: 1,
-            queue_complete(){ return global.tech.waygate >= 2 ? 0 : 10 - global.portal.waygate.count; },
-            cost: {
-                Species(offset){
-                    if (offset){
-                        return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? popCost(25) : 0;
-                    }
-                    return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ? popCost(25) : 0;
                 },
-                Money(offset){
-                    if (offset){
-                        return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? 1000000000 : 0;
-                    }
-                    return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ? 1000000000 : 0;
+                postPower(){
+                    vBind({el: `#srprtl_ruins`},'update');
                 },
-                Supply(offset){
-                    if (offset){
-                        return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? 500000 : 0;
+                citizens(){
+                    let pop = 8;
+                    if (global.race['high_pop']){
+                        pop *= traits.high_pop.vars()[0];
                     }
-                    return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ? 500000 : 0;
+                    return pop;
+                }
+            },
+            hell_forge: {
+                id: 'portal-hell_forge',
+                title: loc('portal_hell_forge_title'),
+                desc(){
+                    return `<div>${loc('portal_hell_forge_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
                 },
-                Blood_Stone(offset){
-                    if (offset){
-                        return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? 5 : 0;
+                reqs: { scarletite: 1 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('hell_forge', offset, 250000000, 1.15, 'portal'); },
+                    Coal(offset){ return spaceCostMultiplier('hell_forge', offset, 1650000, 1.22, 'portal'); },
+                    Steel(offset){ return spaceCostMultiplier('hell_forge', offset, 3800000, 1.22, 'portal'); },
+                    Iridium(offset){ return spaceCostMultiplier('hell_forge', offset, 1200000, 1.22, 'portal'); },
+                    Neutronium(offset){ return spaceCostMultiplier('hell_forge', offset, 280000, 1.22, 'portal'); },
+                    Soul_Gem(offset){ return spaceCostMultiplier('hell_forge', offset, 5, 1.22, 'portal'); },
+                },
+                powered(){ return powerCostMod(12); },
+                special: true,
+                effect(){
+                    let sup = hellSupression('ruins');
+                    let craft = +(75 * sup.supress).toFixed(1);
+                    let reactor = global.tech['inferno_power'] ? `<div>${loc('portal_hell_forge_effect2',[10,loc(`portal_inferno_power_title`)])}</div>` : ``;
+                    return `<div>${loc('portal_hell_forge_effect',[jobScale(1)])}</div>${reactor}<div>${loc('interstellar_stellar_forge_effect3',[3])}</div><div>${loc('interstellar_stellar_forge_effect',[craft])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('hell_forge','portal');
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.portal.hell_forge.on++;
+                            global.city.smelter.cap += 3;
+                            global.city.smelter.Oil += 3;
+                            global.city.smelter.Iron += 3;
+                        }
+                        return true;
                     }
-                    return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ?  5 : 0;
+                    return false;
+                },
+                post(){
+                    loadFoundry();
+                },
+                postPower(on){
+                    if (!on){
+                        if (global.portal.hell_forge.on < global.city.foundry.Scarletite){
+                            let diff = global.city.foundry.Scarletite - global.portal.hell_forge.on;
+                            global.civic.craftsman.workers -= diff;
+                            global.city.foundry.crafting -= diff;
+                            global.city.foundry.Scarletite -= diff;
+                        }
+                    }
+                    loadFoundry();
+                }
+            },
+            inferno_power: {
+                id: 'portal-inferno_power',
+                title: loc('portal_inferno_power_title'),
+                desc(){
+                    return `<div>${loc('portal_inferno_power_title')}</div>`;
+                },
+                reqs: { inferno_power: 1 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('inferno_power', offset, 275000000, 1.16, 'portal'); },
+                    Neutronium(offset){ return spaceCostMultiplier('inferno_power', offset, 3750000, 1.18, 'portal'); },
+                    Stanene(offset){ return spaceCostMultiplier('inferno_power', offset, 12000000, 1.18, 'portal'); },
+                    Bolognium(offset){ return spaceCostMultiplier('inferno_power', offset, 8000000, 1.18, 'portal'); },
+                },
+                powered(){
+                    let power = 20;
+                    if (p_on.hasOwnProperty('hell_forge')){
+                        power += p_on['hell_forge'] * 10; 
+                    }
+                    return powerModifier(-(power));
+                },
+                fuel: {
+                    Infernite: 5,
+                    Coal: 100,
+                    Oil: 80
+                },
+                effect(){
+                    let fuel = $(this)[0].fuel;
+                    return `<div>${loc('space_dwarf_reactor_effect1',[-($(this)[0].powered())])}</div><div class="has-text-caution">${loc('portal_inferno_power_effect',[fuel.Infernite,global.resource.Infernite.name,fuel.Coal,global.resource.Coal.name,fuel.Oil,global.resource.Oil.name])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('inferno_power','portal');
+                        global.portal.inferno_power.on++;
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    vBind({el: `#foundry`},'update');
                 },
             },
-            powered(){
-                return global.portal.hasOwnProperty('waygate') && global.portal.waygate.count >= 10 ? 1 : 0;
-            },
-            power_reqs: { waygate: 2 },
-            effect(wiki){
-                let count = (wiki || 0) + (global.tech['waygate'] && global.tech.waygate >= 2 ? 10 : global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0);
-                if (count >= 10){
-                    let progress = global.portal.hasOwnProperty('waygate') ? `<span class="has-text-warning">${+(global.portal.waygate.progress).toFixed(3)}%</span>` : '0%';
-                    return `<div>${loc('portal_waygate_open')}</div><div>${loc('portal_waygate_progress',[progress])}</div>`;
+            ancient_pillars: {
+                id: 'portal-ancient_pillars',
+                title: loc('portal_ancient_pillars_title'),
+                desc: loc('portal_ancient_pillars_desc'),
+                reqs: { hell_ruins: 2 },
+                queue_complete(){ return global.tech['pillars'] && global.tech.pillars === 1 && global.race.universe !== 'micro' ? 1 : 0; },
+                cost: {
+                    Harmony(wiki){
+                        if (wiki !== undefined){
+                            return wiki + Object.keys(global.pillars).length < Object.keys(races).length - 1 ? 1 : 0;
+                        }
+                        return global.race.universe !== 'micro' && global.tech['pillars'] && global.tech.pillars === 1 ? 1 : 0;
+                    },
+                    Scarletite(wiki){
+                        if (wiki !== undefined){
+                            let pillars = wiki + Object.keys(global.pillars).length;
+                            return pillars < Object.keys(races).length - 1 ? pillars * 125000 + 1000000 : 0;
+                        }
+                        return global.race.universe !== 'micro' && global.tech['pillars'] && global.tech.pillars === 1 ? Object.keys(global.pillars).length * 125000 + 1000000 : 0;
+                    },
+                },
+                count(){
+                    return Object.keys(races).length - 1;
+                },
+                on(){
+                    return Object.keys(global.pillars).length;
+                },
+                effect(wiki){
+                    let pillars = (wiki || 0) + Object.keys(global.pillars).length;
+                    if (pillars >= 1){
+                        return `<div>${loc('portal_ancient_pillars_effect2',[Object.keys(races).length - 1,pillars])}</div>`;
+                    }
+                    else {
+                        return `<div>${loc('portal_ancient_pillars_effect',[Object.keys(races).length - 1])}</div>`;
+                    }
+                },
+                action(){
+                    if (global.tech['pillars'] && global.tech.pillars === 1 && global.race.universe !== 'micro'){
+                        if (payCosts($(this)[0])){
+                            global.pillars[global.race.species] = alevel();
+                            global.tech.pillars = 2;
+                            spatialReasoning(0,false,true);
+                            calcPillar(true);
+                            towerSize(true);
+                            unlockAchieve('resonance');
+                            vBind({el: `#portal-ancient_pillars`},'update');
+                            return true;
+                        }
+                    }
+                    return false;
                 }
-                else {
+            },
+        },
+        prtl_gate: {
+            info: {
+                name: loc('portal_gate_name'),
+                desc(){
+                    return `${loc('portal_gate_desc')} ${loc(global.tech['wtower'] && global.tech['etower'] ? 'portal_gate_open' : 'portal_gate_closed')}`;
+                },
+                support: 'guard_post',
+                hide_support: true,
+                prop(){
+                    let desc = ` - <span class="has-text-advanced">${loc('portal_ruins_security')}:</span> <span class="has-text-caution">{{ on | filter('army') }}</span>`;
+                    desc = desc + ` - <span class="has-text-advanced">${loc('portal_ruins_supressed')}:</span> <span class="has-text-caution">{{ on | filter('sup') }}</span>`;
+                    return desc;
+                },
+                filter(v,type){
+                    let sup = hellSupression('gate');
+                    switch (type){
+                        case 'army':
+                            return Math.round(sup.rating);
+                        case 'sup':
+                            let supress = +(sup.supress * 100).toFixed(2);
+                            return `${supress}%`;
+                    }
+                }
+            },
+            gate_mission: {
+                id: 'portal-gate_mission',
+                title: loc('portal_gate_mission_title'),
+                desc: loc('portal_gate_mission_title'),
+                reqs: { high_tech: 18 },
+                grant: ['hell_gate',1],
+                queue_complete(){ return global.tech.hell_gate >= 1 ? 0 : 1; },
+                cost: {
+                    Money(){ return 250000000; },
+                    Knowledge(){ return 27500000; }
+                },
+                effect: loc('portal_gate_mission_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('portal_gate_mission_result'),'info',false,['progress','hell']);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            west_tower: {
+                id: 'portal-west_tower',
+                title: loc('portal_west_tower'),
+                desc(wiki){
+                    let size = towerSize();
+                    if (!global.portal.hasOwnProperty('west_tower') || global.portal.west_tower.count < size || wiki){
+                        return `<div>${loc('portal_west_tower')}</div><div class="has-text-special">${loc('requires_segmemts',[size])}</div>`;
+                    }
+                    else {
+                        return `<div>${loc('portal_west_tower')}</div>`;
+                    }
+                },
+                reqs: { hell_gate: 2 },
+                queue_size: 25,
+                queue_complete(){ return towerSize() - global.portal.west_tower.count; },
+                cost: {
+                    Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(10000000) : 0; },
+                    Stone(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(100000) : 0; },
+                    Uranium(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(1000) : 0; },
+                    Adamantite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(18000) : 0; },
+                    Vitreloy(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(25000) : 0; },
+                    Soul_Gem(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? 1 : 0; },
+                    Scarletite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0)) < towerSize() ? towerPrice(5000) : 0; },
+                },
+                effect(wiki){
+                    let size = towerSize();
+                    let count = (wiki || 0) + (global.portal.hasOwnProperty('west_tower') ? global.portal.west_tower.count : 0);
+                    if (count < size){
+                        let remain = size - count;
+                        return `<div>${loc('portal_tower_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div><div class="has-text-caution">${loc('portal_tower_effect2')}</div>`;
+                    }
+                    else {
+                        return loc('portal_tower_effect');
+                    }
+                },
+                action(){
+                    if (global.portal.west_tower.count < towerSize() && payCosts($(this)[0])){
+                        incrementStruct('west_tower','portal');
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    if (global.portal.west_tower.count >= towerSize()){
+                        global.tech['wtower'] = 1;
+                        if (global.tech['wtower'] && global.tech['etower'] && !global.tech['hell_lake']){
+                            global.tech['hell_lake'] = 1;
+                            global.settings.portal.lake = true;
+                            global.portal['harbour'] = { count: 0, on: 0, support: 0, s_max: 0 };
+                            messageQueue(loc('portal_gate_open'),'info',false,['progress','hell']);
+                            renderFortress();
+                        }
+                    }
+                }
+            },
+            east_tower: {
+                id: 'portal-east_tower',
+                title: loc('portal_east_tower'),
+                desc(wiki){
+                    let size = towerSize();
+                    if (!global.portal.hasOwnProperty('east_tower') || global.portal.east_tower.count < size || wiki){
+                        return `<div>${loc('portal_east_tower')}</div><div class="has-text-special">${loc('requires_segmemts',[size])}</div>`;
+                    }
+                    else {
+                        return `<div>${loc('portal_east_tower')}</div>`;
+                    }
+                },
+                reqs: { hell_gate: 2 },
+                queue_size: 25,
+                queue_complete(){ return towerSize() - global.portal.east_tower.count; },
+                cost: {
+                    Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(10000000) : 0; },
+                    Stone(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(100000) : 0; },
+                    Uranium(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(1000) : 0; },
+                    Adamantite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(18000) : 0; },
+                    Vitreloy(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(25000) : 0; },
+                    Soul_Gem(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? 1 : 0; },
+                    Scarletite(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0)) < towerSize() ? towerPrice(5000) : 0; },
+                },
+                effect(wiki){
+                    let size = towerSize();
+                    let count = (wiki || 0) + (global.portal.hasOwnProperty('east_tower') ? global.portal.east_tower.count : 0);
+                    if (count < size){
+                        let remain = size - count;
+                        return `<div>${loc('portal_tower_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div><div class="has-text-caution">${loc('portal_tower_effect2')}</div>`;
+                    }
+                    else {
+                        return loc('portal_tower_effect');
+                    }
+                },
+                action(){
+                    if (global.portal.east_tower.count < towerSize() && payCosts($(this)[0])){
+                        incrementStruct('east_tower','portal');
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    if (global.portal.east_tower.count >= towerSize()){
+                        global.tech['etower'] = 1;
+                        if (global.tech['wtower'] && global.tech['etower'] && !global.tech['hell_lake']){
+                            global.tech['hell_lake'] = 1;
+                            global.settings.portal.lake = true;
+                            global.portal['harbour'] = { count: 0, on: 0, support: 0, s_max: 0 };
+                            messageQueue(loc('portal_gate_open'),'info',false,['progress','hell']);
+                            renderFortress();
+                        }
+                    }
+                }
+            },
+            gate_turret: {
+                id: 'portal-gate_turret',
+                title: loc('portal_gate_turret_title'),
+                desc(){
+                    return `<div>${loc('portal_gate_turret_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_gate: 3 },
+                powered(){ return powerCostMod(6); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('gate_turret', offset, 3750000, 1.22, 'portal'); },
+                    Iron(offset){ return spaceCostMultiplier('gate_turret', offset, 4250000, 1.22, 'portal'); },
+                    Elerium(offset){ return spaceCostMultiplier('gate_turret', offset, 275, 1.22, 'portal'); },
+                    Stanene(offset){ return spaceCostMultiplier('gate_turret', offset, 850000, 1.22, 'portal'); },
+                },
+                effect(){
+                    let security = 100;
+                    if (global.race['holy']){
+                        security *= 1 + (traits.holy.vars()[1] / 100);
+                    }
+                    let min = global.tech.hell_gun >= 2 ? 65 : 40;
+                    let max = global.tech.hell_gun >= 2 ? 100 : 60;
+                    return `<div>${loc('portal_gate_turret_effect',[Math.round(security)])}</div><div>${loc('portal_gate_turret_effect2',[min,max])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('gate_turret','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.gate_turret.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                postPower(){
+                    vBind({el: `#srprtl_gate`},'update');
+                }
+            },
+            infernite_mine: {
+                id: 'portal-infernite_mine',
+                title: loc('portal_infernite_mine_title'),
+                desc(){
+                    return `<div>${loc('portal_infernite_mine_title')}</div><div class="has-text-special">${loc('requires_security')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_gate: 4 },
+                powered(){ return powerCostMod(5); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('infernite_mine', offset, 75000000, 1.26, 'portal'); },
+                    Alloy(offset){ return spaceCostMultiplier('infernite_mine', offset, 2450000, 1.26, 'portal'); },
+                    Orichalcum(offset){ return spaceCostMultiplier('infernite_mine', offset, 1650000, 1.26, 'portal'); },
+                    Wrought_Iron(offset){ return spaceCostMultiplier('infernite_mine', offset, 680000, 1.26, 'portal'); },
+                },
+                effect(){                
+                    let sup = hellSupression('gate');
+                    let mining = 0.5 * sup.supress;
+                    return `<div>${loc('portal_infernite_mine_effect',[+(mining).toFixed(3)])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('infernite_mine','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.infernite_mine.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+        },
+        prtl_lake: {
+            info: {
+                name: loc('portal_lake_name'),
+                desc: loc('portal_lake_desc'),
+                support: 'harbour',
+            },
+            lake_mission: {
+                id: 'portal-lake_mission',
+                title: loc('portal_lake_mission_title'),
+                desc: loc('portal_lake_mission_title'),
+                reqs: { hell_lake: 1 },
+                grant: ['hell_lake',2],
+                queue_complete(){ return global.tech.hell_lake >= 2 ? 0 : 1; },
+                cost: {
+                    Money(){ return 500000000; },
+                    Oil(){ return 750000; },
+                    Helium_3(){ return 600000; }
+                },
+                effect: loc('portal_lake_mission_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('portal_lake_mission_result'),'info',false,['progress','hell']);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            harbour: {
+                id: 'portal-harbour',
+                title: loc('portal_harbour_title'),
+                desc(){
+                    return `<div>${loc('portal_harbour_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_lake: 3 },
+                powered(){
+                    let factor = p_on['cooling_tower'] || 0;
+                    return +(powerCostMod(500 * (0.92 ** factor))).toFixed(2);
+                },
+                support(){ return 1; },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('harbour', offset, 225000000, spireCreep(1.18), 'portal'); },
+                    Cement(offset){ return spaceCostMultiplier('harbour', offset, 50000000, spireCreep(1.18), 'portal'); },
+                    Iridium(offset){ return spaceCostMultiplier('harbour', offset, 7500000, spireCreep(1.18), 'portal'); },
+                    Infernite(offset){ return spaceCostMultiplier('harbour', offset, 800000, spireCreep(1.18), 'portal'); },
+                    Stanene(offset){ return spaceCostMultiplier('harbour', offset, 17500000, spireCreep(1.18), 'portal'); },
+                },
+                wide: true,
+                effect(){
+                    let storage = '<div class="aTable">';
+                    if (global.resource.Oil.display){
+                        let val = sizeApproximation(+(spatialReasoning(30000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Oil.name])}</span>`
+                    }
+                    if (global.resource.Alloy.display){
+                        let val = sizeApproximation(+(spatialReasoning(250000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Alloy.name])}</span>`
+                    }
+                    if (global.resource.Polymer.display){
+                        let val = sizeApproximation(+(spatialReasoning(250000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Polymer.name])}</span>`
+                    }
+                    if (global.resource.Iridium.display){
+                        let val = sizeApproximation(+(spatialReasoning(200000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Iridium.name])}</span>`
+                    }
+                    if (global.resource.Helium_3.display){
+                        let val = sizeApproximation(+(spatialReasoning(18000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Helium_3.name])}</span>`
+                    }
+                    if (global.resource.Deuterium.display){
+                        let val = sizeApproximation(+(spatialReasoning(12000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Deuterium.name])}</span>`
+                    }
+                    if (global.resource.Neutronium.display){
+                        let val = sizeApproximation(+(spatialReasoning(180000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Neutronium.name])}</span>`
+                    }
+                    if (global.resource.Adamantite.display){
+                        let val = sizeApproximation(+(spatialReasoning(150000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Adamantite.name])}</span>`
+                    }
+                    if (global.resource.Infernite.display){
+                        let val = sizeApproximation(+(spatialReasoning(75000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Infernite.name])}</span>`
+                    }
+                    if (global.resource.Nano_Tube.display){
+                        let val = sizeApproximation(+(spatialReasoning(750000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Nano_Tube.name])}</span>`
+                    }
+                    if (global.resource.Graphene.display){
+                        let val = sizeApproximation(+(spatialReasoning(1200000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Graphene.name])}</span>`
+                    }
+                    if (global.resource.Stanene.display){
+                        let val = sizeApproximation(+(spatialReasoning(1200000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Stanene.name])}</span>`
+                    }
+                    if (global.resource.Bolognium.display){
+                        let val = sizeApproximation(+(spatialReasoning(130000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Bolognium.name])}</span>`
+                    }
+                    if (global.resource.Orichalcum.display){
+                        let val = sizeApproximation(+(spatialReasoning(130000)).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Orichalcum.name])}</span>`
+                    }
+                    storage = storage + '</div>';
+                    return `<div>${loc('portal_harbour_effect',[1])}</div>${storage}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('harbour','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.harbour.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            cooling_tower: {
+                id: 'portal-cooling_tower',
+                title: loc('portal_cooling_tower_title'),
+                desc(){
+                    return `<div>${loc('portal_cooling_tower_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_lake: 6 },
+                powered(){ return powerCostMod(10); },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('cooling_tower', offset, 250000000, 1.2, 'portal'); },
+                    Polymer(offset){ return spaceCostMultiplier('cooling_tower', offset, 12000000, 1.2, 'portal'); },
+                    Orichalcum(offset){ return spaceCostMultiplier('cooling_tower', offset, 8500000, 1.2, 'portal'); },
+                    Brick(offset){ return spaceCostMultiplier('cooling_tower', offset, 250000, 1.2, 'portal'); },
+                },
+                effect(){
+                    return `<div>${loc('portal_cooling_tower_effect',[8])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('cooling_tower','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.cooling_tower.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            bireme: {
+                id: 'portal-bireme',
+                title: loc('portal_bireme_title'),
+                desc(){
+                    return `<div>${loc('portal_bireme_title')}</div><div class="has-text-special">${loc('space_support',[loc('lake')])}</div>`;
+                },
+                reqs: { hell_lake: 4 },
+                powered(){ return powerCostMod(1); },
+                support(){ return -1; },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('bireme', offset, 190000000, 1.24, 'portal'); },
+                    Helium_3(offset){ return spaceCostMultiplier('bireme', offset, 225000, 1.24, 'portal'); },
+                    Adamantite(offset){ return spaceCostMultiplier('bireme', offset, 15000000, 1.24, 'portal'); },
+                    Nano_Tube(offset){ return spaceCostMultiplier('bireme', offset, 18000000, 1.24, 'portal'); },
+                    Soul_Gem(offset){ return spaceCostMultiplier('bireme', offset, 10, 1.24, 'portal'); },
+                    Scarletite(offset){ return spaceCostMultiplier('bireme', offset, 125000, 1.24, 'portal'); },
+                },
+                effect(){
+                    let rating = global.blood['spire'] && global.blood.spire >= 2 ? 20 : 15;
+                    return `<div class="has-text-caution">${loc('space_used_support',[loc('lake')])}</div><div>${loc('portal_bireme_effect',[rating])}</div><div class="has-text-caution">${loc('galaxy_starbase_mil_crew',[$(this)[0].ship.mil()])}</div>`;
+                },
+                ship: {
+                    civ(){ return 0; },
+                    mil(){ return global.race['high_pop'] ? traits.high_pop.vars()[0] * 2 : 2; },
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('bireme','portal');
+                        if (global.portal.harbour.support < global.portal.harbour.s_max){
+                            global.portal.bireme.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            transport: {
+                id: 'portal-transport',
+                title: loc('portal_transport_title'),
+                desc(){
+                    return `<div>${loc('portal_transport_title')}</div><div class="has-text-special">${loc('space_support',[loc('lake')])}</div>`;
+                },
+                reqs: { hell_lake: 5 },
+                powered(){ return powerCostMod(1); },
+                support(){ return -1; },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('transport', offset, 300000000, 1.22, 'portal'); },
+                    Oil(offset){ return spaceCostMultiplier('transport', offset, 180000, 1.22, 'portal'); },
+                    Alloy(offset){ return spaceCostMultiplier('transport', offset, 18000000, 1.22, 'portal'); },
+                    Graphene(offset){ return spaceCostMultiplier('transport', offset, 12500000, 1.22, 'portal'); },
+                    Soul_Gem(offset){ return spaceCostMultiplier('transport', offset, 5, 1.22, 'portal'); },
+                    Scarletite(offset){ return spaceCostMultiplier('transport', offset, 250000, 1.22, 'portal'); },
+                },
+                effect(){
+                    let rating = global.blood['spire'] && global.blood.spire >= 2 ? 0.8 : 0.85;
+                    let bireme = +((rating ** (gal_on['bireme'] || 0)) * 100).toFixed(1);
+                    return `<div class="has-text-caution">${loc('space_used_support',[loc('lake')])}</div><div>${loc('portal_transport_effect',[5])}</div><div class="has-text-danger">${loc('portal_transport_effect2',[bireme])}</div><div class="has-text-caution">${loc('galaxy_starbase_civ_crew',[$(this)[0].ship.civ()])}</div>`;
+                },
+                special: true,
+                sAction(){
+                    global.settings.civTabs = 4;
+                    global.settings.marketTabs = 3;
+                    if (!global.settings.tabLoad){
+                        loadTab('mTabResource');
+                        clearPopper(`portal-transport`);
+                    }
+                },
+                ship: {
+                    civ(){ return global.race['high_pop'] ? traits.high_pop.vars()[0] * 3 : 3; },
+                    mil(){ return 0; },
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('transport','portal');
+                        if (global.portal.harbour.support < global.portal.harbour.s_max){
+                            global.portal.transport.on++;
+                        }
+                        if (!global.settings.portal.spire){
+                            global.settings.portal.spire = true;
+                            global.settings.showCargo = true;
+                            clearElement($('#resources'));
+                            defineResources();
+                            global.tech['hell_spire'] = 1;
+                            global.portal['purifier'] = { count: 0, on: 0, support: 0, s_max: 0, supply: 0, sup_max: 100, diff: 0 };
+                            global.portal['port'] = { count: 0, on: 0 };
+                            messageQueue(loc('portal_transport_unlocked'),'info',false,['progress','hell']);
+                            renderFortress();
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+        },
+        prtl_spire: {
+            info: {
+                name: loc('portal_spire_name'),
+                desc: loc('portal_spire_desc'),
+                support: 'purifier',
+                prop(){
+                    let desc = ` - <span class="has-text-advanced">${loc('portal_spire_supply')}:</span> <span class="has-text-caution">{{ supply | filter }} / {{ sup_max }}</span>`;
+                    return desc + ` (<span class="has-text-success">+{{ diff | filter(2) }}/s</span>)`;
+                },
+                filter(v,fix){
+                    return fix ? +(v).toFixed(fix) : Math.floor(v);
+                }
+            },
+            spire_mission: {
+                id: 'portal-spire_mission',
+                title: loc('portal_spire_mission_title'),
+                desc: loc('portal_spire_mission_title'),
+                reqs: { hell_spire: 1 },
+                grant: ['hell_spire',2],
+                queue_complete(){ return global.tech.hell_spire >= 2 ? 0 : 1; },
+                cost: {
+                    Species(){ return popCost(50); },
+                    Oil(){ return 900000; },
+                    Helium_3(){ return 750000; },
+                    Structs(){
+                        return {
+                            portal: {
+                                bireme: { s: 'prtl_lake', count: 1, on: 1 },
+                                transport: { s: 'prtl_lake', count: 1, on: 1 },
+                            }
+                        };
+                    }
+                },
+                effect: loc('portal_spire_mission_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('portal_spire_mission_result'),'info',false,['progress','hell']);
+                        return true;
+                    }
+                    return false;
+                },
+                flair: loc('portal_spire_mission_flair'),
+            },
+            purifier: {
+                id: 'portal-purifier',
+                title: loc('portal_purifier_title'),
+                desc(){
+                    return `<div>${loc('portal_purifier_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { hell_spire: 3 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('purifier', offset, 85000000, spireCreep(1.15), 'portal'); },
+                    Supply(offset){ return global.portal['purifier'] && global.portal.purifier.count === 0 ? 100 : spaceCostMultiplier('purifier', offset, 4200, spireCreep(1.2), 'portal'); },
+                },
+                powered(){ return powerCostMod(125); },
+                support(){ return global.tech['b_stone'] && global.tech.b_stone >= 3 ? 1.25 : 1; },
+                effect(){
+                    return `<div>${loc('portal_purifier_effect',[$(this)[0].support()])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('purifier','portal');
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.portal.purifier.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            port: {
+                id: 'portal-port',
+                title: loc('portal_port_title'),
+                desc(){
+                    return `<div>${loc('portal_port_title')}</div><div class="has-text-special">${loc('portal_spire_support')}</div>`;
+                },
+                reqs: { hell_spire: 3 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('port', offset, 135000000, spireCreep(1.2), 'portal'); },
+                    Supply(offset){ return global.portal.hasOwnProperty('port') && global.portal.port.count === 0 ? 100 : spaceCostMultiplier('port', offset, 6250, spireCreep(1.2), 'portal'); },
+                },
+                powered(){ return powerCostMod(1); },
+                support(){ return -1; },
+                effect(){
+                    let port_value = 10000;
+                    if (spire_on['base_camp']){
+                        port_value *= 1 + (spire_on['base_camp'] * 0.4);
+                    }
+                    return `<div class="has-text-caution">${loc('portal_port_effect1',[$(this)[0].support()])}</div><div>${loc('portal_port_effect2',[Math.round(port_value)])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('port','portal');
+                        if (global.portal.purifier.support < global.portal.purifier.s_max){
+                            global.portal.port.on++;
+                        }
+                        if (global.tech.hell_spire === 3){
+                            global.tech.hell_spire = 4;
+                            global.portal['base_camp'] = { count: 0, on: 0 };
+                            renderFortress();
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            base_camp: {
+                id: 'portal-base_camp',
+                title: loc('portal_base_camp_title'),
+                desc(){
+                    return `<div>${loc('portal_base_camp_title')}</div><div class="has-text-special">${loc('portal_spire_support')}</div>`;
+                },
+                reqs: { hell_spire: 4 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('base_camp', offset, 425000000, spireCreep(1.2), 'portal'); },
+                    Supply(offset){ return spaceCostMultiplier('base_camp', offset, 50000, spireCreep(1.2), 'portal'); },
+                },
+                powered(){ return powerCostMod(1); },
+                support(){ return -1; },
+                effect(){
+                    return `<div class="has-text-caution">${loc('portal_port_effect1',[$(this)[0].support()])}</div><div>${loc('portal_base_camp_effect',[40])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('base_camp','portal');
+                        if (global.portal.purifier.support < global.portal.purifier.s_max){
+                            global.portal.base_camp.on++;
+                        }
+                        if (global.tech.hell_spire === 4){
+                            global.tech.hell_spire = 5;
+                            global.portal['bridge'] = { count: 0 };
+                            messageQueue(loc('portal_spire_bridge_collapse'),'info',false,['progress','hell']);
+                            renderFortress();
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            bridge: {
+                id: 'portal-bridge',
+                title: loc('portal_bridge_title'),
+                desc(wiki){
+                    if (!global.portal.hasOwnProperty('bridge') || global.portal.bridge.count < 10 || wiki){
+                        return `<div>${loc('portal_bridge_title')}</div><div class="has-text-special">${loc('requires_segmemts',[10])}</div>`;
+                    }
+                    else {
+                        return `<div>${loc('portal_bridge_title')}</div>`;
+                    }
+                },
+                reqs: { hell_spire: 5 },
+                queue_size: 1,
+                queue_complete(){ return 10 - global.portal.bridge.count; },
+                cost: {
+                    Species(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0)) < 10 ? popCost(10) : 0; },
+                    Money(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0)) < 10 ? 500000000 : 0; },
+                    Supply(offset){ return ((offset || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0)) < 10 ? 100000 : 0; },
+                },
+                effect(wiki){
                     let size = 10;
-                    let remain = size - count;
-                    return `<div>${loc('portal_waygate_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div>`;
+                    let count = (wiki || 0) + (global.portal.hasOwnProperty('bridge') ? global.portal.bridge.count : 0);
+                    if (count < size){
+                        let remain = size - count;
+                        return `<div>${loc('portal_bridge_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div><div class="has-text-caution">${loc('portal_bridge_effect2')}</div>`;
+                    }
+                    else {
+                        return loc('portal_bridge_complete');
+                    }
+                },
+                action(){
+                    if (global.portal.bridge.count < 10 && payCosts($(this)[0])){
+                        incrementStruct('bridge','portal');
+                        if (global.portal.bridge.count >= 10){
+                            global.portal['sphinx'] = { count: 0 };
+                            global.tech.hell_spire = 6;
+                            renderFortress();
+                        }
+                        return true;
+                    }
+                    return false;
                 }
             },
-            action(){
-                if (global.portal.waygate.count < 10 && global.tech['waygate'] && global.tech.waygate === 1 && payCosts($(this)[0])){
-                    incrementStruct('waygate','portal');
-                    if (global.portal.waygate.count >= 10){
-                        global.tech.waygate = 2;
-                        global.portal.waygate.count = 1;
-                        renderFortress();
+            sphinx: {
+                id: 'portal-sphinx',
+                title(){ return global.tech.hell_spire === 7 ? loc('portal_sphinx_solve') : loc('portal_sphinx_title'); },
+                desc: loc('portal_sphinx_desc'),
+                reqs: { hell_spire: 6 },
+                queue_complete(){ return 8 - global.tech.hell_spire; },
+                cost: {
+                    Knowledge(offset){
+                        let count = (offset || 0) + (!global.tech['hell_spire'] || global.tech.hell_spire < 7 ? 0 : global.tech.hell_spire === 7 ? 1 : 2);
+                        return count === 1 ? 50000000 : count === 0 ? 40000000 : 0;
                     }
-                    return true;
+                },
+                effect(wiki){
+                    let count = (wiki || 0) + (!global.tech['hell_spire'] || global.tech.hell_spire < 7 ? 0 : global.tech.hell_spire === 7 ? 1 : 2);
+                    if (count === 1){
+                        return loc('portal_sphinx_effect2');
+                    }
+                    else if (count === 2){
+                        return loc('portal_sphinx_effect3');
+                    }
+                    return loc('portal_sphinx_effect');
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        if (global.tech.hell_spire === 6){
+                            global.tech.hell_spire = 7;
+                            messageQueue(loc('portal_sphinx_msg'),'info',false,['progress','hell']);
+                            renderFortress();
+                            return true;
+                        }
+                        else if (global.tech.hell_spire === 7){
+                            global.tech.hell_spire = 8;
+                            renderFortress();
+                            messageQueue(loc('portal_sphinx_answer_msg'),'info',false,['progress','hell']);  
+                            return true;
+                        }
+                    }
+                    return false;
                 }
-                return false;
-            }
-        },
+            },
+            bribe_sphinx: {
+                id: 'portal-bribe_sphinx',
+                title: loc('portal_sphinx_bribe'),
+                desc: loc('portal_sphinx_desc'),
+                reqs: { hell_spire: 7 },
+                condition(){
+                    return global.tech['hell_spire'] && global.tech.hell_spire === 7 && !global.tech['sphinx_bribe'] ? true : false;
+                },
+                cost: {
+                    Soul_Gem(){ return 250; },
+                    Supply(){ return 500000; }
+                },
+                effect(){
+                    return loc('portal_sphinx_bribe_effect');
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        if (global.tech.hell_spire === 7 && !global.tech['sphinx_bribe']){
+                            global.tech['sphinx_bribe'] = 1;
+                            global.resource.Codex.display = true;
+                            global.resource.Codex.amount = 1;
+                            messageQueue(loc('portal_sphinx_bribe_msg'),'info',false,['progress','hell']);                        
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                post(){
+                    if (global.tech['sphinx_bribe']){
+                        drawTech();
+                        renderFortress();
+                        clearPopper('portal-bribe_sphinx');
+                    }
+                }
+            },
+            spire_survey: {
+                id: 'portal-spire_survey',
+                title: loc('portal_spire_survey_title'),
+                desc: loc('portal_spire_survey_title'),
+                reqs: { hell_spire: 8 },
+                grant: ['hell_spire',9],
+                queue_complete(){ return global.tech.hell_spire >= 9 ? 0 : 1; },
+                cost: {
+                    Oil(){ return 1200000; },
+                    Helium_3(){ return 900000; },
+                },
+                effect: loc('portal_spire_survey_effect'),
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.portal['mechbay'] = { count: 0, on: 0, bay: 0, max: 0, active: 0, scouts: 0, mechs: [] };
+                        global.portal['spire'] = { count: 1, progress: 0, boss: '', type: '', status: {} };
+                        genSpireFloor();
+                        messageQueue(loc('portal_spire_survey_msg'),'info',false,['progress','hell']);
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    if (global.tech['hell_spire'] && global.tech.hell_spire === 9){
+                        renderFortress();
+                        clearPopper('portal-spire_survey');
+                    }
+                }
+            },
+            mechbay: {
+                id: 'portal-mechbay',
+                title: loc('portal_mechbay_title'),
+                desc(){
+                    return `<div>${loc('portal_mechbay_title')}</div><div class="has-text-special">${loc('portal_spire_support')}</div>`;
+                },
+                reqs: { hell_spire: 9 },
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('mechbay', offset, 100000000, 1.2, 'portal'); },
+                    Supply(offset){ return spaceCostMultiplier('mechbay', offset, 250000, 1.2, 'portal'); },
+                },
+                powered(){ return powerCostMod(1); },
+                support(){ return -1; },
+                special: true,
+                sAction(){
+                    global.settings.civTabs = 2;
+                    global.settings.govTabs = 4;
+                    if (!global.settings.tabLoad){
+                        loadTab('mTabCivic');
+                        clearPopper(`portal-mechbay`);
+                    }
+                },
+                effect(){
+                    let bay = global.portal.hasOwnProperty('mechbay') ? global.portal.mechbay.bay : 0;
+                    let max = global.portal.hasOwnProperty('mechbay') ? global.portal.mechbay.max : 0;
+                    return `<div class="has-text-caution">${loc('portal_port_effect1',[$(this)[0].support()])}</div><div>${loc('portal_mechbay_effect')}</div><div>${loc('portal_mechbay_effect2',[bay,max])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        incrementStruct('mechbay','portal');
+                        if (global.portal.purifier.support < global.portal.purifier.s_max){
+                            global.portal.mechbay.on++;
+                            global.portal.mechbay.max += 25;
+                        }
+                        global.settings.showMechLab = true;
+                        if (global.portal.mechbay.count === 1){
+                            messageQueue(loc('portal_mechbay_unlocked'),'info',false,['progress','hell']);
+                            drawMechLab();
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                postPower(){
+                    updateMechbay();
+                }
+            },
+            spire: {
+                id: 'portal-spire',
+                title: loc('portal_spire_title'),
+                desc: loc('portal_spire_title'),
+                reqs: { hell_spire: 9 },
+                queue_complete(){ return 0; },
+                cost: {},
+                effect(){
+                    let floor = global.portal.hasOwnProperty('spire') ? global.portal.spire.count : 0;
+                    let terrain = global.portal.hasOwnProperty('spire') ? `<span class="has-text-warning">${loc(`portal_spire_type_${global.portal.spire.type}`)}</span>` : '?';
+                    let status = ``;
+                    if (global.portal.hasOwnProperty('spire') && Object.keys(global.portal.spire.status).length > 0){
+                        status = `<div>${loc('portal_spire_hazard',[Object.keys(global.portal.spire.status).map(v => `<span class="has-text-warning">${loc(`portal_spire_status_${v}`)}</span>`).join(', ')])}</div>`;
+                    }
+                    let progress = global.portal.hasOwnProperty('spire') ? `<span class="has-text-warning">${+(global.portal.spire.progress).toFixed(3)}%</span>` : '0%';
+                    let leftSide = `<div>${loc('portal_spire_effect',[floor])}</div><div>${loc('portal_spire_type',[terrain])}</div>${status}<div>${loc('portal_spire_progress',[progress])}</div>`;
+                    
+                    let boss = global.portal.hasOwnProperty('spire') ? global.portal.spire.boss : 'crazed';
+                    let threat = `<div>${loc('portal_spire_mob',[`<span class="has-text-danger">${loc(`portal_mech_boss_${boss}`)}</span>`])}</div>`;
 
-    }
-};
+                    let weak = `???`;
+                    let resist = `???`;
+                    if (global.stats['spire']){
+                        let resists = bossResists(boss);
+                        let level = $(this)[0].mscan();
+                        if (level > 0){
+                            weak = loc(`portal_mech_weapon_${resists.w}`);
+                        }
+                        if (level >= 5){
+                            resist = loc(`portal_mech_weapon_${resists.r}`);
+                        }
+                    }
+                    let rightSide = `<div>${threat}<div>${loc('portal_spire_mob_weak',[`<span class="has-text-warning">${weak}</span>`])}</div><div>${loc('portal_spire_mob_resist',[`<span class="has-text-warning">${resist}</span>`])}</div></div>`;
+
+                    return `<div class="split"><div>${leftSide}</div><div>${rightSide}</div></div>`;
+                },
+                mscan(){
+                    let level = 0;
+                    Object.keys(global.stats.spire).forEach(function(uni){
+                        let boss = global.portal.hasOwnProperty('spire') ? global.portal.spire.boss : 'crazed';
+                        if (global.stats.spire.hasOwnProperty(uni) && global.stats.spire[uni].hasOwnProperty(boss) && global.stats.spire[uni][boss] > level){
+                            level = global.stats.spire[uni][boss];
+                        }
+                    });
+                    return level;
+                },
+                wide: true,
+                action(){
+                    return false;
+                }
+            },
+            waygate: {
+                id: 'portal-waygate',
+                title: loc('portal_waygate_title'),
+                desc(wiki){
+                    if (!global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) || wiki){
+                        return `<div>${loc('portal_waygate_title')}</div><div class="has-text-special">${loc('requires_segmemts',[10])}</div>`;
+                    }
+                    else {
+                        return `<div>${loc('portal_waygate_title')}</div>`;
+                    }
+                },
+                reqs: { waygate: 1 },
+                queue_size: 1,
+                queue_complete(){ return global.tech.waygate >= 2 ? 0 : 10 - global.portal.waygate.count; },
+                cost: {
+                    Species(offset){
+                        if (offset){
+                            return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? popCost(25) : 0;
+                        }
+                        return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ? popCost(25) : 0;
+                    },
+                    Money(offset){
+                        if (offset){
+                            return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? 1000000000 : 0;
+                        }
+                        return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ? 1000000000 : 0;
+                    },
+                    Supply(offset){
+                        if (offset){
+                            return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? 500000 : 0;
+                        }
+                        return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ? 500000 : 0;
+                    },
+                    Blood_Stone(offset){
+                        if (offset){
+                            return offset + (global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0) < 10 ? 5 : 0;
+                        }
+                        return !global.portal.hasOwnProperty('waygate') || (global.tech['waygate'] && global.tech.waygate < 2) ?  5 : 0;
+                    },
+                },
+                powered(){
+                    return global.portal.hasOwnProperty('waygate') && global.portal.waygate.count >= 10 ? 1 : 0;
+                },
+                power_reqs: { waygate: 2 },
+                effect(wiki){
+                    let count = (wiki || 0) + (global.tech['waygate'] && global.tech.waygate >= 2 ? 10 : global.portal.hasOwnProperty('waygate') ? global.portal.waygate.count : 0);
+                    if (count >= 10){
+                        let progress = global.portal.hasOwnProperty('waygate') ? `<span class="has-text-warning">${+(global.portal.waygate.progress).toFixed(3)}%</span>` : '0%';
+                        return `<div>${loc('portal_waygate_open')}</div><div>${loc('portal_waygate_progress',[progress])}</div>`;
+                    }
+                    else {
+                        let size = 10;
+                        let remain = size - count;
+                        return `<div>${loc('portal_waygate_effect')}</div><div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div>`;
+                    }
+                },
+                action(){
+                    if (global.portal.waygate.count < 10 && global.tech['waygate'] && global.tech.waygate === 1 && payCosts($(this)[0])){
+                        incrementStruct('waygate','portal');
+                        if (global.portal.waygate.count >= 10){
+                            global.tech.waygate = 2;
+                            global.portal.waygate.count = 1;
+                            renderFortress();
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+
+        }
+    };
+}
 
 function spireCreep(base){
     let creep = global.portal.hasOwnProperty('spire') && global.blood['spire'] ? base - ((global.portal.spire.count - 1) / 2500) : base;
@@ -1720,10 +1723,6 @@ export function soulForgeSoldiers(){
         }
     }
     return soldiers;
-}
-
-export function fortressTech(){
-    return fortressModules;
 }
 
 export function renderFortress(){

@@ -2077,6 +2077,7 @@ function defineMad(){
                             nuke.addClass('b');
                         }, 600);
                         setTimeout(function(){
+                            $('body').removeClass('nuke');
                             warhead();
                         }, 4000);
                     }

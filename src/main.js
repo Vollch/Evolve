@@ -1,23 +1,23 @@
-import { global, save, webWorker, intervals, keyMap, resizeGame, breakdown, sizeApproximation, keyMultiplier, power_generated, p_on, support_on, int_on, gal_on, spire_on, set_qlevel, quantum_level } from './vars.js';
-import { loc } from './locale.js';
-import { unlockAchieve, checkAchievements, drawAchieve, alevel, universeAffix, challengeIcon, unlockFeat } from './achieve.js';
-import { gameLoop, vBind, popover, clearPopper, flib, tagEvent, clearElement, timeCheck, arpaTimeCheck, timeFormat, powerModifier, modRes, initMessageQueue, messageQueue, calc_mastery, calcPillar, darkEffect, calcQueueMax, calcRQueueMax, buildQueue, shrineBonusActive, getShrineBonus, eventActive, easterEgg, easterEggBind, trickOrTreatBind, powerGrid, deepClone } from './functions.js';
-import { races, traits, racialTrait, randomMinorTrait, biomes, planetTraits, genusVars, shapeShift } from './races.js';
-import { defineResources, resource_values, spatialReasoning, craftCost, plasmidBonus, faithBonus, tradeRatio, craftingRatio, crateValue, containerValue, tradeSellPrice, tradeBuyPrice, atomic_mass, supplyValue, galaxyOffers } from './resources.js';
-import { defineJobs, job_desc, loadFoundry, farmerValue, jobScale } from './jobs.js';
+import { global, save, webWorker, intervals, keyMap, breakdown, sizeApproximation, keyMultiplier, power_generated, p_on, support_on, int_on, gal_on, spire_on, set_qlevel, quantum_level, loadSave } from './vars.js';
+import { loc, getString } from './locale.js';
+import { unlockAchieve, checkAchievements, drawAchieve, alevel, universeAffix, unlockFeat, initAchieve } from './achieve.js';
+import { gameLoop, vBind, popover, clearPopper, flib, tagEvent, clearElement, timeCheck, arpaTimeCheck, timeFormat, powerModifier, modRes, messageQueue, calc_mastery, calcPillar, darkEffect, calcQueueMax, calcRQueueMax, buildQueue, shrineBonusActive, getShrineBonus, eventActive, easterEgg, easterEggBind, trickOrTreatBind, powerGrid, deepClone } from './functions.js';
+import { races, traits, racialTrait, randomMinorTrait, biomes, planetTraits, genusVars, shapeShift, initRaces } from './races.js';
+import { resource_values, spatialReasoning, craftCost, plasmidBonus, faithBonus, tradeRatio, craftingRatio, crateValue, containerValue, tradeSellPrice, tradeBuyPrice, atomic_mass, supplyValue, galaxyOffers } from './resources.js';
+import { job_desc, loadFoundry, farmerValue, jobScale } from './jobs.js';
 import { f_rate, manaCost, setPowerGrid, gridEnabled, gridDefs, nf_resources } from './industry.js';
 import { defineIndustry, checkControlling, garrisonSize, armyRating, govTitle, govCivics } from './civics.js';
-import { actions, updateDesc, setChallengeScreen, addAction, BHStorageMulti, storageMultipler, checkAffordable, drawCity, drawTech, gainTech, evoProgress, housingLabel, updateQueueNames, wardenLabel, planetGeology, resQueue, bank_vault, start_cataclysm, raceList, orbitDecayed, postBuild } from './actions.js';
-import { renderSpace, fuel_adjust, int_fuel_adjust, zigguratBonus, genPlanets, setUniverse, universe_types, gatewayStorage, piracy, spaceTech } from './space.js';
-import { renderFortress, bloodwar, soulForgeSoldiers, hellSupression, genSpireFloor, mechRating, mechCollect, updateMechbay } from './portal.js';
-import { syndicate, shipFuelUse, spacePlanetStats, genXYcoord, shipCrewSize, storehouseMultiplier, tritonWar, sensorRange, erisWar, calcAIDrift, drawMap } from './truepath.js';
-import { arpa, buildArpa } from './arpa.js';
+import { actions, updateDesc, setChallengeScreen, addAction, BHStorageMulti, storageMultipler, checkAffordable, drawCity, drawTech, gainTech, evoProgress, housingLabel, wardenLabel, resQueue, bank_vault, start_cataclysm, raceList, orbitDecayed, postBuild, updateQueueNames, initActions } from './actions.js';
+import { renderSpace, fuel_adjust, int_fuel_adjust, zigguratBonus, genPlanets, setUniverse, gatewayStorage, piracy, spaceProjects, initSpace } from './space.js';
+import { renderFortress, bloodwar, soulForgeSoldiers, hellSupression, genSpireFloor, mechRating, mechCollect, updateMechbay, initFortress } from './portal.js';
+import { syndicate, shipFuelUse, spacePlanetStats, genXYcoord, shipCrewSize, storehouseMultiplier, tritonWar, sensorRange, erisWar, calcAIDrift, drawMap, initTruth } from './truepath.js';
+import { arpa, buildArpa, initARPA } from './arpa.js';
 import { events, eventList } from './events.js';
-import { govern, govActive } from './governor.js';
+import { govern, govActive, initGovernor } from './governor.js';
 import { production, highPopAdjust } from './prod.js';
-import { swissKnife } from './tech.js';
+import { swissKnife, initTechs } from './tech.js';
 import { vacuumCollapse } from './resets.js';
-import { index, mainVue, initTabs, loadTab } from './index.js';
+import { index, mainVue, loadTab } from './index.js';
 import { getTopChange } from './wiki/change.js';
 import { enableDebug, updateDebugData } from './debug.js';
 
@@ -48,10 +48,6 @@ window.addEventListener('storage', (e) => {
     }
     multitab = true;
 });
-
-if (global.settings.expose){
-    enableDebug();
-}
 
 var quickMap = {
     showCiv: 1,
@@ -115,545 +111,6 @@ $(document).mousemove(function(e){
     });
 });
 
-index();
-var revision = global['revision'] ? global['revision'] : '';
-if (global['beta']){
-    $('#topBar .version > a').html(`v${global.version} Beta ${global.beta}${revision}`);
-}
-else {
-    $('#topBar .version > a').html('v'+global.version+revision);
-}
-
-initMessageQueue();
-
-if (global.lastMsg){
-    Object.keys(global.lastMsg).forEach(function (tag){
-        global.lastMsg[tag].reverse().forEach(function(msg){
-            messageQueue(msg.m, msg.c, true, [tag], true);
-        });
-        global.lastMsg[tag].reverse();
-    });
-}
-
-$(`#msgQueue`).height(global.settings.msgQueueHeight);
-$(`#buildQueue`).height(global.settings.buildQueueHeight);
-
-if (global.queue.rename === true){
-    updateQueueNames(true);
-    global.queue.rename = false;
-}
-
-global.settings.sPackMsg = save.getItem('string_pack_name') ? loc(`string_pack_using`,[save.getItem('string_pack_name')]) : loc(`string_pack_none`);
-
-if (global.queue.display){
-    calcQueueMax();
-}
-if (global.r_queue.display){
-    calcRQueueMax();
-}
-
-mainVue();
-
-if (global['new']){
-    messageQueue(loc('new'), 'warning',false,['progress']);
-    global['new'] = false;
-}
-if (global.city['mass_driver']){
-    p_on['mass_driver'] = global.city['mass_driver'].on;
-}
-if (global.portal['turret']){
-    p_on['turret'] = global.portal.turret.on;
-}
-if (global.interstellar['fusion']){
-    int_on['fusion'] = global.interstellar.fusion.on;
-}
-if (global.portal['hell_forge']){
-    p_on['hell_forge'] = global.portal.hell_forge.on;
-}
-if (global.space['sam']){
-    p_on['sam'] = global.space.sam.on;
-}
-if (global.space['operating_base']){
-    p_on['operating_base'] = global.space.operating_base.on;
-    support_on['operating_base'] = global.space.operating_base.on;
-}
-if (global.space['fob']){
-    p_on['fob'] = global.space.fob.on;
-}
-
-defineJobs(true);
-defineResources();
-initTabs();
-buildQueue();
-if (global.race['shapeshifter']){
-    shapeShift(false,true);
-}
-
-Object.keys(gridDefs()).forEach(function(gridtype){
-    powerGrid(gridtype);
-});
-
-resizeGame();
-
-vBind({
-    el: '#race',
-    data: {
-        race: global.race,
-        city: global.city
-    },
-    methods: {
-        name(){
-            return flib('name');
-        }
-    },
-    filters: {
-        approx(kw){
-            return +(kw).toFixed(2);
-        },
-        mRound(m){
-            return +(m).toFixed(1);
-        }
-    }
-});
-
-popover('race',
-    function(){
-        return typeof races[global.race.species].desc === 'string' ? races[global.race.species].desc : races[global.race.species].desc();
-    },{
-        elm: '#race > .name'
-    }
-);
-
-var moraleCap = 125;
-
-popover('morale',
-    function(obj){
-        if (global.city.morale.unemployed !== 0){
-            let type = global.city.morale.unemployed > 0 ? 'success' : 'danger';
-            obj.popper.append(`<p class="modal_bd"><span>${loc(global.race['playful'] ? 'morale_hunter' : 'morale_unemployed')}</span> <span class="has-text-${type}"> ${+(global.city.morale.unemployed).toFixed(1)}%</span></p>`);
-        }
-        if (global.city.morale.stress !== 0){
-            let type = global.city.morale.stress > 0 ? 'success' : 'danger';
-            obj.popper.append(`<p class="modal_bd"><span>${loc('morale_stress')}</span> <span class="has-text-${type}"> ${+(global.city.morale.stress).toFixed(1)}%</span></p>`);
-        }
-
-        let total = 100 + global.city.morale.unemployed + global.city.morale.stress;
-        Object.keys(global.city.morale).forEach(function (morale){
-            if (!['current','unemployed','stress','season','cap','potential'].includes(morale) && global.city.morale[morale] !== 0){
-                total += global.city.morale[morale];
-                let type = global.city.morale[morale] > 0 ? 'success' : 'danger';
-
-                let value = global.city.morale[morale];
-                if (morale === 'entertain' && global.civic.govern.type === 'democracy'){
-                    let democracy = global.tech['high_tech'] && global.tech['high_tech'] >= 2 ? ( global.tech['high_tech'] >= 12 ? 1.3 : 1.25 ) : 1.2;
-                    value /= democracy;
-                }
-
-                obj.popper.append(`<p class="modal_bd"><span>${loc(`morale_${morale}`)}</span> <span class="has-text-${type}"> ${+(value).toFixed(1)}%</span></p>`)
-
-                if (morale === 'entertain' && global.civic.govern.type === 'democracy'){
-                    let democracy = global.tech['high_tech'] && global.tech['high_tech'] >= 2 ? ( global.tech['high_tech'] >= 12 ? 30 : 25 ) : 20;
-                    obj.popper.append(`<p class="modal_bd"><span>ᄂ${loc('govern_democracy')}</span> <span class="has-text-success"> +${democracy}%</span></p>`);
-                }
-            }
-        });
-
-        if (global.city.morale.season !== 0){
-            total += global.city.morale.season;
-            let season = global.city.calendar.season === 0 ? loc('morale_spring') : global.city.calendar.season === 1 ? loc('morale_summer') : loc('morale_winter');
-            let type = global.city.morale.season > 0 ? 'success' : 'danger';
-            obj.popper.append(`<p class="modal_bd"><span>${season}</span> <span class="has-text-${type}"> ${+(global.city.morale.season).toFixed(1)}%</span></p>`);
-        }
-
-        if (global.civic.govern.type === 'corpocracy'){
-            let penalty = global.tech['high_tech'] && global.tech['high_tech'] >= 12 ? 5 : 10;
-            total -= penalty;
-            obj.popper.append(`<p class="modal_bd"><span>${loc('govern_corpocracy')}</span> <span class="has-text-danger"> -${penalty}%</span></p>`);
-        }
-        if (global.civic.govern.type === 'republic'){
-            let repub = global.tech['high_tech'] && global.tech['high_tech'] >= 12 ? ( global.tech['high_tech'] >= 16 ? 40 : 30 ) : 20;
-            total += repub;
-            obj.popper.append(`<p class="modal_bd"><span>${loc('govern_republic')}</span> <span class="has-text-success"> +${repub}%</span></p>`);
-        }
-        if (global.civic.govern.type === 'federation'){
-            total += 10;
-            obj.popper.append(`<p class="modal_bd"><span>${loc('govern_federation')}</span> <span class="has-text-success"> +10%</span></p>`);
-        }
-
-        let milVal = govActive('militant',1);
-        if (milVal){
-            total -= milVal;
-            obj.popper.append(`<p class="modal_bd"><span>${loc('gov_trait_militant')}</span> <span class="has-text-danger"> -${milVal}%</span></p>`);
-        }
-
-        if (global.race['cheese']){
-            let raw_cheese = global.stats.hasOwnProperty('reset') ? global.stats.reset + 1 : 1;
-            let cheese = +(raw_cheese / (raw_cheese + 10) * 11).toFixed(2);
-            total += cheese;
-            obj.popper.append(`<p class="modal_bd"><span>${swissKnife(true,false)}</span> <span class="has-text-success"> +${cheese}%</span></p>`);
-        }
-
-        if (global.civic['homeless']){
-            let homeless = global.civic.homeless / 2;
-            total -= homeless;
-            obj.popper.append(`<p class="modal_bd"><span>${loc(`homeless`)}</span> <span class="has-text-danger"> -${homeless}%</span></p>`);
-        }
-
-        total = +(total).toFixed(1);
-
-        let container = $(`<div></div>`);
-        obj.popper.append(container);
-
-        container.append(`<div class="modal_bd sum"><span>${loc('morale_total')}</span> <span class="has-text-warning"> ${+(total).toFixed(1)}%</span></div>`);
-        container.append(`<div class="modal_bd"><span>${loc('morale_max')}</span> <span class="has-text-${total > moraleCap ? 'caution' : 'warning'}"> ${+(moraleCap).toFixed(1)}%</span></div>`);
-        container.append(`<div class="modal_bd"><span>${loc('morale_current')}</span> <span class="has-text-warning"> ${+(global.city.morale.current).toFixed(1)}%</span></div>`);
-
-        return undefined;
-    },
-    {
-        classes: `has-background-light has-text-dark`
-    }
-);
-
-popover('powerStatus',function(obj){
-        let drain = +(global.city.power_total - global.city.power).toFixed(2);
-        Object.keys(power_generated).forEach(function (k){
-            if (power_generated[k]){
-                let gen = +(power_generated[k]).toFixed(2);
-                obj.popper.append(`<p class="modal_bd"><span>${k}</span> <span class="has-text-success">+${gen}</span></p>`);
-            }
-        });
-        obj.popper.append(`<p class="modal_bd"><span>${loc('power_consumed')}</span> <span class="has-text-danger"> -${drain}</span></p>`);
-        let avail = +(global.city.power).toFixed(2);
-        if (global.city.power > 0){
-            obj.popper.append(`<p class="modal_bd sum"><span>${loc('power_available')}</span> <span class="has-text-success">${avail}</span></p>`);
-        }
-        else {
-            obj.popper.append(`<p class="modal_bd sum"><span>${loc('power_available')}</span> <span class="has-text-danger">${avail}</span></p>`);
-        }
-    },
-    {
-        classes: `has-background-light has-text-dark`
-    }
-);
-
-
-if (global.settings.pause){
-    $(`#pausegame`).addClass('pause');
-}
-else {
-    $(`#pausegame`).addClass('play');
-}
-
-vBind({
-    el: '#topBar',
-    data: {
-        city: global.city,
-        race: global.race,
-        s: global.settings
-    },
-    methods: {
-        weather(){
-            switch(global.city.calendar.weather){
-                case 0:
-                    if (global.city.calendar.temp === 0){
-                        return global.city.calendar.wind === 1 ? loc('snowstorm') : loc('snow');
-                    }
-                    else {
-                        return global.city.calendar.wind === 1 ? loc('thunderstorm') : loc('rain');
-                    }
-                case 1:
-                    return global.city.calendar.wind === 1 ? loc('cloudy_windy') : loc('cloudy');
-                case 2:
-                    return global.city.calendar.wind === 1 ? loc('sunny_windy') : loc('sunny');
-            }
-        },
-        temp(){
-            switch(global.city.calendar.temp){
-                case 0:
-                    return loc('cold');// weather, cold weather may reduce food output.';
-                case 1:
-                    return loc('moderate');
-                case 2:
-                    return loc('hot');// weather, hot weather may reduce worker productivity.';
-            }
-        },
-        moon(){
-            if (global.race['orbit_decayed']){
-                return loc('moon0'); // New Moon
-            }
-            else if (global.city.calendar.moon === 0){
-                return loc('moon1'); // New Moon
-            }
-            else if (global.city.calendar.moon > 0 && global.city.calendar.moon < 7){
-                return loc('moon2'); // Waxing Crescent Moon
-            }
-            else if (global.city.calendar.moon === 7){
-                return loc('moon3'); // First Quarter Moon
-            }
-            else if (global.city.calendar.moon > 7 && global.city.calendar.moon < 14){
-                return loc('moon4'); // Waxing Gibbous Moon
-            }
-            else if (global.city.calendar.moon === 14){
-                return loc('moon5'); // Full Moon
-            }
-            else if (global.city.calendar.moon > 14 && global.city.calendar.moon < 21){
-                return loc('moon6'); // Waning Gibbous Moon
-            }
-            else if (global.city.calendar.moon === 21){
-                return loc('moon7'); // Third Quarter Moon
-            }
-            else if (global.city.calendar.moon > 21){
-                return loc('moon8'); // Waning Crescent Moon
-            }
-        },
-        showUniverse(){
-            return global.race.universe === 'standard' || global.race.universe === 'bigbang' ? false : true;
-        },
-        atRemain(){
-            return loc(`accelerated_time`);
-        },
-        pause(){
-            $(`#pausegame`).removeClass('play');
-            $(`#pausegame`).removeClass('pause');
-            if (global.settings.pause){
-                global.settings.pause = false;
-                $(`#pausegame`).addClass('play');
-            }
-            else {
-                global.settings.pause = true;
-                $(`#pausegame`).addClass('pause');
-            }
-            if (!global.settings.pause && !webWorker.s){
-                gameLoop('start');
-            }
-        },
-        pausedesc(){
-            return global.settings.pause ? loc('game_play') : loc('game_pause');
-        }
-    },
-    filters: {
-        planet(species){
-            return races[species].home;
-        },
-        universe(universe){
-            return universe === 'standard' || universe === 'bigbang' ? '' : universe_types[universe].name;
-        },
-        remain(at){
-            let minutes = Math.ceil(at * 2.5 / 60);
-            if (minutes > 0){
-                let hours = Math.floor(minutes / 60);
-                minutes -= hours * 60;
-                return `${hours}:${minutes.toString().padStart(2,'0')}`;
-            }
-            return;
-        }
-    }
-});
-
-popover('topBarPlanet',
-    function(obj){
-        if (global.race.species === 'protoplasm'){
-            obj.popper.append($(`<span>${loc('infant')}</span>`));
-        }
-        else {
-            let planet = races[global.race.species].home;
-            let race = flib('name');
-            let planet_label = biomes[global.city.biome].label;
-            let trait = global.city.ptrait;
-            if (trait.length > 0){
-                let traits = '';
-                trait.forEach(function(t){
-                    if (planetTraits.hasOwnProperty(t)){
-                        if (t === 'mellow' && global.race.species === 'entish'){
-                            traits += `${loc('planet_mellow_eg')} `;
-                        }
-                        else {
-                            traits += `${planetTraits[t].label} `;
-                        }
-                    }
-                });
-                planet_label = `${traits}${planet_label}`;
-            }
-            let orbit = global.city.calendar.orbit;
-
-            let geo_traits = planetGeology(global.city.geology);
-
-            let challenges = '';
-            if (global.race['junker']){
-                challenges = challenges + `<div>${loc('evo_challenge_junker_desc')} ${loc('evo_challenge_junker_conditions')}</div>`;
-            }
-            if (global.race['joyless']){
-                challenges = challenges + `<div>${loc('evo_challenge_joyless_desc')} ${loc('evo_challenge_joyless_conditions')}</div>`;
-            }
-            if (global.race['steelen']){
-                challenges = challenges + `<div>${loc('evo_challenge_steelen_desc')} ${loc('evo_challenge_steelen_conditions')}</div>`;
-            }
-            if (global.race['decay']){
-                challenges = challenges + `<div>${loc('evo_challenge_decay_desc')} ${loc('evo_challenge_decay_conditions')}</div>`;
-            }
-            if (global.race['emfield']){
-                challenges = challenges + `<div>${loc('evo_challenge_emfield_desc')} ${loc('evo_challenge_emfield_conditions')}</div>`;
-            }
-            if (global.race['inflation']){
-                challenges = challenges + `<div>${loc('evo_challenge_inflation_desc')} ${loc('evo_challenge_inflation_conditions')}</div>`;
-            }
-            if (global.race['banana']){
-                challenges = challenges + `<div>${loc('evo_challenge_banana_desc')} ${loc('wiki_achieve_banana1')}. ${loc('wiki_achieve_banana2')}. ${loc('wiki_achieve_banana3')}. ${loc('wiki_achieve_banana4',[500])}. ${loc('wiki_achieve_banana5',[50])}.</div>`;
-            }
-            if (global.race['orbit_decay']){
-                let impact = global.race['orbit_decayed'] ? '' : loc('evo_challenge_orbit_decay_impact',[global.race['orbit_decay'] - global.stats.days]);
-                let state = global.race['orbit_decayed'] ? loc('evo_challenge_orbit_decay_impacted',[races[global.race.species].home]) : loc('evo_challenge_orbit_decay_desc');
-                challenges = challenges + `<div>${state} ${loc('evo_challenge_orbit_decay_conditions')} ${impact}</div>`;
-                if (calc_mastery() >= 100 && global.race.universe !== 'antimatter'){
-                    challenges = challenges + `<div class="has-text-caution">${loc('evo_challenge_cataclysm_warn')}</div>`;
-                }
-                else {
-                    challenges = challenges + `<div class="has-text-danger">${loc('evo_challenge_scenario_warn')}</div>`;
-                }
-            }
-
-            if (global.race['cataclysm']){
-                if (calc_mastery() >= 50 && global.race.universe !== 'antimatter'){
-                    challenges = challenges + `<div>${loc('evo_challenge_cataclysm_desc')}</div><div class="has-text-caution">${loc('evo_challenge_cataclysm_warn')}</div>`;
-                }
-                else {
-                    challenges = challenges + `<div>${loc('evo_challenge_cataclysm_desc')}</div><div class="has-text-danger">${loc('evo_challenge_scenario_warn')}</div>`;
-                }
-            }
-            obj.popper.append($(`<div>${loc(global.race['cataclysm'] ? 'no_home' : 'home',[planet,race,planet_label,orbit])}</div>${geo_traits}${challenges}`));
-        }
-        return undefined;
-    },
-    {
-        elm: `#topBar .planetWrap .planet`,
-        classes: `has-background-light has-text-dark`
-    }
-);
-
-popover('topBarUniverse',
-    function(obj){
-        obj.popper.append($(`<div>${universe_types[global.race.universe].desc}</div>`));
-        obj.popper.append($(`<div>${universe_types[global.race.universe].effect}</div>`));
-        return undefined;
-    },
-    {
-        elm: `#topBar .planetWrap .universe`,
-        classes: `has-background-light has-text-dark`
-    }
-);
-
-if (global.race['orbit_decay'] && !global.race['orbit_decayed']){
-    popover(`infoTimer`, function(){
-        return global.race['orbit_decayed'] ? '' : loc('evo_challenge_orbit_decay_impact',[global.race['orbit_decay'] - global.stats.days]);
-    },
-    {
-        elm: `#infoTimer`,
-        classes: `has-background-light has-text-dark`
-    });
-}
-
-challengeIcon();
-
-if (global.race.species === 'protoplasm'){
-    global.resource.RNA.display = true;
-    if (global.race.universe === 'bigbang'){
-        Math.seed = global.race.seed;
-        setUniverse();
-    }
-    else if (global.race.seeded && !global.race['chose']){
-        Math.seed = global.race.seed;
-        genPlanets();
-    }
-    else {
-        addAction('evolution','rna');
-    }
-    var evolve_actions = ['dna','membrane','organelles','nucleus','eukaryotic_cell','mitochondria'];
-    for (var i = 0; i < evolve_actions.length; i++) {
-        if (global.evolution[evolve_actions[i]]){
-            addAction('evolution',evolve_actions[i]);
-        }
-    }
-    if (global.evolution['sexual_reproduction'] && !global.evolution['phagocytosis'] && !global.evolution['chloroplasts'] && !global.evolution['chitin'] && !global.evolution['exterminate']){
-        addAction('evolution','sexual_reproduction');
-    }
-    else if ((global.evolution['phagocytosis'] || global.evolution['chloroplasts'] || global.evolution['chitin'] || global.race['exterminate']) && !global.evolution['multicellular']){
-        addAction('evolution','phagocytosis');
-        addAction('evolution','chloroplasts');
-        addAction('evolution','chitin');
-        if (global.stats.achieve['obsolete'] && global.stats.achieve[`obsolete`].l >= 5){
-            addAction('evolution','exterminate');
-        }
-    }
-    else {
-        let late_actions = ['multicellular','spores','poikilohydric','bilateral_symmetry','bryophyte','athropods','mammals','eggshell','endothermic','ectothermic','humanoid','gigantism','dwarfism','animalism','carnivore','herbivore','omnivore','aquatic','fey','sand','heat','polar','demonic','celestial','synthetic','sentience','bunker'];
-        for (var i = 0; i < late_actions.length; i++){
-            if (global.evolution[late_actions[i]] && global.evolution[late_actions[i]].count == 0){
-                addAction('evolution',late_actions[i]);
-            }
-        }
-
-        let race_options = raceList;
-
-        const custom_map = {
-            humanoid: 'humanoid',
-            animal: 'animalism',
-            carnivore: 'carnivore',
-            herbivore: 'herbivore',
-            omnivore: 'omnivore',
-            small: 'dwarfism',
-            giant : 'gigantism',
-            reptilian: 'ectothermic',
-            avian: 'endothermic',
-            insectoid: 'athropods',
-            plant: 'chloroplasts',
-            fungi: 'chitin',
-            aquatic: 'aquatic',
-            fey: 'fey',
-            heat: 'heat',
-            polar: 'polar',
-            sand: 'sand',
-            demonic: 'demonic',
-            angelic: 'celestial',
-            synthetic: 'exterminate'
-        };
-
-        if (races.custom.hasOwnProperty('type') && global.evolution[custom_map[races.custom.type]] && global.evolution[custom_map[races.custom.type]].count > 0){
-            race_options.push('custom');
-        }
-
-        for (var i = 0; i < race_options.length; i++){
-            if (global.evolution[race_options[i]] && global.evolution[race_options[i]].count == 0){
-                addAction('evolution',race_options[i]);
-            }
-        }
-        if (global.race['junker'] || global.race['sludge']){
-            Object.keys(races).forEach(function(r){
-                if (r !== 'junker' && r !== 'sludge'){
-                    $(`#evolution-${r}`).addClass('is-hidden');
-                }
-            });
-        }
-    }
-    if (global.evolution['sexual_reproduction'] && global.evolution['sexual_reproduction'].count > 0){
-        evoProgress();
-    }
-
-    if (global.evolution['bunker'] && global.evolution['bunker'].count >= 1){
-        setChallengeScreen();
-    }
-}
-else {
-    if (global.portal.hasOwnProperty('soul_forge') && global.portal.soul_forge.on){
-        p_on['soul_forge'] = 1;
-    }
-    setWeather();
-}
-
-q_check(true);
-
-$('#lbl_city').html('Village');
-
 if (window.Worker){
     webWorker.w = new Worker("evolve/evolve.js");
     webWorker.w.addEventListener('message', function(e){
@@ -671,12 +128,175 @@ if (window.Worker){
         }
     }, false);
 }
-gameLoop('start');
 
-resourceAlt();
+export function startGame(){
+    loadSave();
+    initGameData();
+    index();
+    mainVue();
+    initRun();
+}
+startGame();
 
-var firstRun = true;
-var gene_sequence = global.arpa['sequence'] && global.arpa['sequence']['on'] ? global.arpa.sequence.on : 0;
+export function initGameData() {
+    getString();
+    initRaces();
+    initTechs();
+    initTruth();
+    initFortress();
+    initSpace();
+    initActions();
+    initGovernor();
+    initARPA();
+    initAchieve();
+    updateQueueNames(true);
+}
+
+var firstRun, gene_sequence;
+export function initRun(){
+    Object.keys(gridDefs()).forEach(function(gridtype){
+        powerGrid(gridtype);
+    });
+    if (global.race['shapeshifter']){
+        shapeShift(false,true);
+    }
+    if (global['new']){
+        messageQueue(loc('new'), 'warning',false,['progress']);
+        global['new'] = false;
+    }
+    if (global.city['mass_driver']){
+        p_on['mass_driver'] = global.city['mass_driver'].on;
+    }
+    if (global.portal['turret']){
+        p_on['turret'] = global.portal.turret.on;
+    }
+    if (global.interstellar['fusion']){
+        int_on['fusion'] = global.interstellar.fusion.on;
+    }
+    if (global.portal['hell_forge']){
+        p_on['hell_forge'] = global.portal.hell_forge.on;
+    }
+    if (global.space['sam']){
+        p_on['sam'] = global.space.sam.on;
+    }
+    if (global.space['operating_base']){
+        p_on['operating_base'] = global.space.operating_base.on;
+        support_on['operating_base'] = global.space.operating_base.on;
+    }
+    if (global.space['fob']){
+        p_on['fob'] = global.space.fob.on;
+    }
+    if (global.settings.expose){
+        enableDebug();
+    }
+    if (global.queue.display){
+        calcQueueMax();
+    }
+    if (global.r_queue.display){
+        calcRQueueMax();
+    }
+    if (global.race.species === 'protoplasm'){
+        global.resource.RNA.display = true;
+        if (global.race.universe === 'bigbang'){
+            Math.seed = global.race.seed;
+            setUniverse();
+        }
+        else if (global.race.seeded && !global.race['chose']){
+            Math.seed = global.race.seed;
+            genPlanets();
+        }
+        else {
+            addAction('evolution','rna');
+        }
+        var evolve_actions = ['dna','membrane','organelles','nucleus','eukaryotic_cell','mitochondria'];
+        for (var i = 0; i < evolve_actions.length; i++) {
+            if (global.evolution[evolve_actions[i]]){
+                addAction('evolution',evolve_actions[i]);
+            }
+        }
+        if (global.evolution['sexual_reproduction'] && !global.evolution['phagocytosis'] && !global.evolution['chloroplasts'] && !global.evolution['chitin'] && !global.evolution['exterminate']){
+            addAction('evolution','sexual_reproduction');
+        }
+        else if ((global.evolution['phagocytosis'] || global.evolution['chloroplasts'] || global.evolution['chitin'] || global.race['exterminate']) && !global.evolution['multicellular']){
+            addAction('evolution','phagocytosis');
+            addAction('evolution','chloroplasts');
+            addAction('evolution','chitin');
+            if (global.stats.achieve['obsolete'] && global.stats.achieve[`obsolete`].l >= 5){
+                addAction('evolution','exterminate');
+            }
+        }
+        else {
+            let late_actions = ['multicellular','spores','poikilohydric','bilateral_symmetry','bryophyte','athropods','mammals','eggshell','endothermic','ectothermic','humanoid','gigantism','dwarfism','animalism','carnivore','herbivore','omnivore','aquatic','fey','sand','heat','polar','demonic','celestial','synthetic','sentience','bunker'];
+            for (var i = 0; i < late_actions.length; i++){
+                if (global.evolution[late_actions[i]] && global.evolution[late_actions[i]].count == 0){
+                    addAction('evolution',late_actions[i]);
+                }
+            }
+
+            let race_options = raceList;
+
+            const custom_map = {
+                humanoid: 'humanoid',
+                animal: 'animalism',
+                carnivore: 'carnivore',
+                herbivore: 'herbivore',
+                omnivore: 'omnivore',
+                small: 'dwarfism',
+                giant : 'gigantism',
+                reptilian: 'ectothermic',
+                avian: 'endothermic',
+                insectoid: 'athropods',
+                plant: 'chloroplasts',
+                fungi: 'chitin',
+                aquatic: 'aquatic',
+                fey: 'fey',
+                heat: 'heat',
+                polar: 'polar',
+                sand: 'sand',
+                demonic: 'demonic',
+                angelic: 'celestial',
+                synthetic: 'exterminate'
+            };
+
+            if (races.custom.hasOwnProperty('type') && global.evolution[custom_map[races.custom.type]] && global.evolution[custom_map[races.custom.type]].count > 0){
+                race_options.push('custom');
+            }
+
+            for (var i = 0; i < race_options.length; i++){
+                if (global.evolution[race_options[i]] && global.evolution[race_options[i]].count == 0){
+                    addAction('evolution',race_options[i]);
+                }
+            }
+            if (global.race['junker'] || global.race['sludge']){
+                Object.keys(races).forEach(function(r){
+                    if (r !== 'junker' && r !== 'sludge'){
+                        $(`#evolution-${r}`).addClass('is-hidden');
+                    }
+                });
+            }
+        }
+        if (global.evolution['sexual_reproduction'] && global.evolution['sexual_reproduction'].count > 0){
+            evoProgress();
+        }
+
+        if (global.evolution['bunker'] && global.evolution['bunker'].count >= 1){
+            setChallengeScreen();
+        }
+    }
+    else {
+        if (global.portal.hasOwnProperty('soul_forge') && global.portal.soul_forge.on){
+            p_on['soul_forge'] = 1;
+        }
+        setWeather();
+    }
+    q_check(true);
+    resourceAlt();
+    firstRun = true;
+    gene_sequence = global.arpa['sequence'] && global.arpa['sequence']['on'] ? global.arpa.sequence.on : 0;
+    gameLoop('stop');
+    gameLoop('start');
+}
+
 function fastLoop(){
     if (!global.race['no_craft']){
         $('.craft').each(function(e){
@@ -2565,7 +2185,7 @@ function fastLoop(){
             let mcapval = global.race['high_pop'] ? highPopAdjust(1) : 1;
             mBaseCap += global.civic.entertainer.workers * mcapval;
         }
-        moraleCap = mBaseCap;
+        let moraleCap = mBaseCap;
 
         if (global.tech['monuments']){
             let gasVal = govActive('gaslighter',2);
@@ -8977,7 +8597,7 @@ function longLoop(){
         }
 
         if (global.tech['syndicate'] && global.race['truepath']){
-            let regions = spaceTech();
+            let regions = spaceProjects;
             Object.keys(regions).forEach(function(region){
                 if (regions[region].info.hasOwnProperty('syndicate') && regions[region].info.syndicate()){
                     let cap = regions[region].info.hasOwnProperty('syndicate_cap') ? regions[region].info.syndicate_cap() : 500;

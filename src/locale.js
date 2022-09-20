@@ -1,7 +1,7 @@
 import { global, save } from './vars.js';
 
-let strings;
-getString(global.settings.locale);
+var rawStrings = {};
+var strings = {};
 
 export function loc(key, variables) {
     let string = strings[key];
@@ -39,51 +39,49 @@ export function loc(key, variables) {
     return string;
 }
 
-function getString(locale) {
-    $.ajaxSetup({ async: false });
+export function getString() {
+    let locale = global.settings.locale;
+    let defaultString = {};
+    try {
+        $.ajaxSetup({ async: false });
 
-    let defaultString;
-    $.getJSON("strings/strings.json", (data) => { defaultString = data; });
+        if (!rawStrings["en-US"]){
+            $.getJSON("strings/strings.json", (data) => { rawStrings["en-US"] = data; });
+        }
+        Object.assign(defaultString, rawStrings["en-US"]);
 
-    if (locale != "en-US"){
-        let localeString;
-        try {
-            $.getJSON(`strings/strings.${locale}.json`, (data) => { localeString = data; })
-        }
-        catch (e) {
-            console.error(e,e.stack);
-        }
-        const defSize = defaultString.length;
+        if (locale !== "en-US"){
+            let defSize = Object.keys(defaultString).length;
+            if (!rawStrings[locale]){
+                $.getJSON(`strings/strings.${locale}.json`, (data) => { rawStrings[locale] = data; })
+            }
+            if (rawStrings[locale]) {
+                Object.assign(defaultString, rawStrings[locale]);
+            }
 
-        if (localeString) {
-            Object.assign(defaultString, localeString);
+            if(Object.keys(defaultString).length !== defSize && global.settings.expose){
+                console.error(`string.${locale}.json has extra keys.`);
+            }
         }
 
-        if(defaultString.length != defSize && global.settings.expose){
-            console.error(`string.${locale}.json has extra keys.`);
+        let string_pack = save.getItem('string_pack') || false;
+        if (string_pack && global.settings.sPackOn){
+            let defSize = Object.keys(defaultString).length;
+            let themeString = JSON.parse(LZString.decompressFromUTF16(string_pack));
+            if (themeString) {
+                Object.assign(defaultString, themeString);
+            }
+
+            if (Object.keys(defaultString).length !== defSize && global.settings.expose){
+                console.error(`string pack has extra keys.`);
+            }
         }
+
+        $.ajaxSetup({ async: true });
     }
-    let string_pack = save.getItem('string_pack') || false;
-    if (string_pack && global.settings.sPackOn){
-        let themeString;
-        try {
-            themeString = JSON.parse(LZString.decompressFromUTF16(string_pack));
-        }
-        catch (e) {
-            console.error(e,e.stack);
-        }
-        const defSize = defaultString.length;
-        
-        if (themeString) {
-            Object.assign(defaultString, themeString);
-        }
-        
-        if (defaultString.length != defSize && global.settings.expose){
-            console.error(`string pack has extra keys.`);
-        }
+    catch (e) {
+        console.error(e,e.stack);
     }
-
-    $.ajaxSetup({ async: true });
     strings = defaultString;
 }
 

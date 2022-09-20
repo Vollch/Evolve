@@ -2,6 +2,7 @@ import { global, save, webWorker, clearSavedMessages, clearStates } from './vars
 import { tagEvent, calcPrestige, updateResetStats } from './functions.js';
 import { races, planetTraits } from './races.js';
 import { unlockAchieve, unlockFeat, checkAchievements, universeAffix } from './achieve.js';
+import { startGame } from './main.js';
 
 // Mutual Assured Destruction
 export function warhead(){
@@ -25,16 +26,9 @@ export function warhead(){
         let gains = calcPrestige('mad');
         let new_plasmid = gains.plasmid;
 
-        global.stats.reset++;
         global.stats.mad++;
-        global.stats.tdays += global.stats.days;
-        global.stats.days = 0;
-        global.stats.tknow += global.stats.know;
-        global.stats.know = 0;
-        global.stats.tstarved += global.stats.starved;
-        global.stats.starved = 0;
-        global.stats.tdied += global.stats.died;
-        global.stats.died = 0;
+        updateResetStats();
+
         if (global.race.universe === 'antimatter'){
             antiplasmid += new_plasmid;
             global.stats.antiplasmid += new_plasmid;
@@ -97,12 +91,11 @@ export function warhead(){
         };
         global.tech = { theology: 1 };
         clearStates();
-        global.new = true;
         Math.seed = Math.rand(0,10000);
         global.seed = Math.seed;
         
         save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-        window.location.reload();
+        startGame();
     }
 }
 
@@ -253,12 +246,11 @@ export function bioseed(){
     };
     global.tech = { theology: 1 };
     clearStates();
-    global.new = true;
     Math.seed = Math.rand(0,10000);
     global.seed = Math.seed;
 
     save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-    window.location.reload();
+    startGame();
 }
 
 // Cataclysm
@@ -349,7 +341,6 @@ export function cataclysm_end(){
         };
         global.tech = { theology: 1 };
         clearStates();
-        global.new = true;
         Math.seed = Math.rand(0,10000);
         global.seed = Math.seed;
 
@@ -368,7 +359,7 @@ export function cataclysm_end(){
         global.race['start_cataclysm'] = 1;
         global.race['cataclysm'] = 1;
         save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-        window.location.reload();
+        startGame();
     }
 }
 
@@ -494,12 +485,11 @@ export function big_bang(){
     };
     global.tech = { theology: 1 };
     clearStates();
-    global.new = true;
     Math.seed = Math.rand(0,10000);
     global.seed = Math.seed;
 
     save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-    window.location.reload();
+    startGame();
 }
 
 export function vacuumCollapse(){
@@ -611,12 +601,11 @@ export function vacuumCollapse(){
         };
         global.tech = { theology: 1 };
         clearStates();
-        global.new = true;
         Math.seed = Math.rand(0,10000);
         global.seed = Math.seed;
 
         save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-        window.location.reload();
+        startGame();
     }
 }
 
@@ -740,12 +729,11 @@ export function ascend(){
     };
     global.tech = { theology: 1 };
     clearStates();
-    global.new = true;
     Math.seed = Math.rand(0,10000);
     global.seed = Math.seed;
 
     save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-    window.location.reload();
+    startGame();
 }
 
 // Demonic Infusion
@@ -856,12 +844,11 @@ export function descension(){
     };
     global.tech = { theology: 1 };
     clearStates();
-    global.new = true;
     Math.seed = Math.rand(0,10000);
     global.seed = Math.seed;
 
     save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-    window.location.reload();
+    startGame();
 }
 
 // Terraform
@@ -973,12 +960,11 @@ export function terraform(planet){
     };
     global.tech = { theology: 1 };
     clearStates();
-    global.new = true;
     Math.seed = Math.rand(0,10000);
     global.seed = Math.seed;
 
     save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-    window.location.reload();
+    startGame();
 }
 
 // AI Appocalypse
@@ -1071,10 +1057,9 @@ export function aiApocalypse(){
 
     global.tech = { theology: 1 };
     clearStates();
-    global.new = true;
     Math.seed = Math.rand(0,10000);
     global.seed = Math.seed;
 
     save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-    window.location.reload();
+    startGame();
 }

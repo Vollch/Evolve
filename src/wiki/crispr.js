@@ -37,7 +37,7 @@ const specialRequirements = {
     ancients: [
         {
             title: loc(`wiki_arpa_crispr_special_ancients`),
-            color: global.genes['old_gods'] ? true : false,
+            color: global.race['old_gods'] !== 'none' ? true : false,
             link: 'wiki.html#resets-prestige-intro'
         }
     ],

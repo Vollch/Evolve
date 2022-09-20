@@ -6,1330 +6,1333 @@ import { defineIndustry, armyRating, garrisonSize } from './civics.js';
 import { jobScale } from './jobs.js';
 import { production, highPopAdjust } from './prod.js';
 import { actions, payCosts, drawTech, bank_vault } from './actions.js';
-import { fuel_adjust, spaceTech, renderSpace } from './space.js';
+import { fuel_adjust, spaceProjects, renderSpace } from './space.js';
 import { loc } from './locale.js';
 
-export const outerTruth = {
-    spc_titan: {
-        info: {
-            name(){
-                return genusVars[races[global.race.species].type].solar.titan;
-            },
-            desc(){
-                return loc('space_titan_info_desc',[genusVars[races[global.race.species].type].solar.titan, races[global.race.species].home]);
-            },
-            support: 'electrolysis',
-            zone: 'outer',
-            syndicate(){ return global.tech['titan'] && global.tech.titan >= 3 && global.tech['enceladus'] && global.tech.enceladus >= 2 ? true : false; },
-            syndicate_cap(){
-                if (global.tech['triton']){
-                    return global.tech.outer >= 4 ? 2000 : 1000;
-                }
-                return 600;
-            }
-        },
-        titan_mission: {
-            id: 'space-titan_mission',
-            title(){
-                return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.titan]);
-            },
-            desc(){
-                return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.titan]);
-            },
-            reqs: { outer: 1 },
-            grant: ['titan',1],
-            path: ['truepath'],
-            queue_complete(){ return global.tech.titan >= 1 ? 0 : 1; },
-            cost: {
-                Helium_3(offset,wiki){ return +fuel_adjust(250000,false,wiki).toFixed(0); },
-                Elerium(){ return 100; }
-            },
-            effect(){
-                return loc('space_titan_mission_effect',[genusVars[races[global.race.species].type].solar.titan]);
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('space_titan_mission_action',[genusVars[races[global.race.species].type].solar.titan, races[global.race.species].home]),'info',false,['progress']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        titan_spaceport: {
-            id: 'space-titan_spaceport',
-            title: loc('space_red_spaceport_title'),
-            desc: `<div>${loc('space_red_spaceport_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`,
-            reqs: { titan: 1 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('titan_spaceport', offset, 2500000, 1.32); },
-                Lumber(offset){ return spaceCostMultiplier('titan_spaceport', offset, 750000, 1.32); },
-                Cement(offset){ return spaceCostMultiplier('titan_spaceport', offset, 350000, 1.32); },
-                Mythril(offset){ return spaceCostMultiplier('titan_spaceport', offset, 10000, 1.32); }
-            },
-            effect(){
-                let water = global.resource.Water.display ? `<div>${loc('plus_max_resource',[sizeApproximation(spatialReasoning(250)),global.resource.Water.name])}</div>` : ``;
-                let support = global.tech['enceladus'] && global.tech.enceladus >= 2 ? `<div>+${loc(`galaxy_alien2_support`,[$(this)[0].support(),genusVars[races[global.race.species].type].solar.enceladus])}</div>` : ``;
-                let storage = global.tech['titan'] && global.tech.titan >= 5 ? `<div>${loc(`space_titan_spaceport_storage`,[25])}</div>` : ``;
-                return `${support}${water}${storage}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            support(){ return 2; },
-            powered(){ return powerCostMod(10); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.titan_spaceport.count++;
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.space.titan_spaceport.on++;
+export var outerTruth;
+export function initTruth(){
+    outerTruth = {
+        spc_titan: {
+            info: {
+                name(){
+                    return genusVars[races[global.race.species].type].solar.titan;
+                },
+                desc(){
+                    return loc('space_titan_info_desc',[genusVars[races[global.race.species].type].solar.titan, races[global.race.species].home]);
+                },
+                support: 'electrolysis',
+                zone: 'outer',
+                syndicate(){ return global.tech['titan'] && global.tech.titan >= 3 && global.tech['enceladus'] && global.tech.enceladus >= 2 ? true : false; },
+                syndicate_cap(){
+                    if (global.tech['triton']){
+                        return global.tech.outer >= 4 ? 2000 : 1000;
                     }
-                    return true;
+                    return 600;
                 }
-                return false;
             },
-            post(){
-                if (global.tech['titan'] === 1){
-                    global.tech['titan'] = 2;
-                    drawTech();
-                }
-            }
-        },
-        electrolysis: {
-            id: 'space-electrolysis',
-            title: loc('space_electrolysis_title'),
-            desc(){ return `<div>${loc('space_electrolysis_title')}</div><div class="has-text-special">${loc('space_electrolysis_req',[global.resource.Water.name])}</div>`; },
-            reqs: { titan: 3 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('electrolysis', offset, 1000000, 1.25); },
-                Copper(offset){ return spaceCostMultiplier('electrolysis', offset, 185000, 1.25); },
-                Steel(offset){ return spaceCostMultiplier('electrolysis', offset, 220000, 1.25); },
-                Polymer(offset){ return spaceCostMultiplier('electrolysis', offset, 380000, 1.25); }
-            },
-            effect(){
-                let support = `<div>+${loc(`galaxy_alien2_support`,[$(this)[0].support(),genusVars[races[global.race.species].type].solar.titan])}</div>`;
-                return `${support}<div class="has-text-caution">${loc('space_electrolysis_use',[$(this)[0].support_fuel().a,global.resource.Water.name,$(this)[0].powered()])}</div>`;
-            },
-            support(){
-                return global.tech['titan_ai_core'] && global.tech.titan_ai_core >= 2 && p_on['ai_core2'] ? 3 : 2;
-            },
-            support_fuel(){ return { r: 'Water', a: 35 }; },
-            powered(){ return powerCostMod(8); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.electrolysis.count++;
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.space.electrolysis.on++;
+            titan_mission: {
+                id: 'space-titan_mission',
+                title(){
+                    return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.titan]);
+                },
+                desc(){
+                    return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.titan]);
+                },
+                reqs: { outer: 1 },
+                grant: ['titan',1],
+                path: ['truepath'],
+                queue_complete(){ return global.tech.titan >= 1 ? 0 : 1; },
+                cost: {
+                    Helium_3(offset,wiki){ return +fuel_adjust(250000,false,wiki).toFixed(0); },
+                    Elerium(){ return 100; }
+                },
+                effect(){
+                    return loc('space_titan_mission_effect',[genusVars[races[global.race.species].type].solar.titan]);
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('space_titan_mission_action',[genusVars[races[global.race.species].type].solar.titan, races[global.race.species].home]),'info',false,['progress']);
+                        return true;
                     }
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                if (global.tech['titan'] === 3){
-                    global.tech['titan'] = 4;
-                    drawTech();
-                }
-            }
-        },
-        hydrogen_plant: {
-            id: 'space-hydrogen_plant',
-            title: loc('space_hydrogen_plant_title'),
-            desc(){ return `<div>${loc('space_hydrogen_plant_title')}</div><div class="has-text-special">${loc('space_hydrogen_plant_req')}</div>`; },
-            reqs: { titan_power: 1 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 1500000, 1.28); },
-                Iridium(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 292000, 1.28); },
-                Stanene(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 599000, 1.28); },
-                Cement(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 180000, 1.28); }
-            },
-            effect(){
-                return `<span>${loc('space_dwarf_reactor_effect1',[-($(this)[0].powered())])}</span>, <span class="has-text-caution">${loc('space_hydrogen_plant_effect',[1,loc('space_electrolysis_title')])}</span>`;
-            },
-            support(){
-                return 2;
-            },
-            powered(){ return powerModifier(-22); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.hydrogen_plant.count++;
-                    if (global.space.electrolysis.on > global.space.hydrogen_plant.on){
-                        global.space.hydrogen_plant.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        titan_quarters: {
-            id: 'space-titan_quarters',
-            title: loc('interstellar_habitat_title'),
-            desc(){
-                return `<div>${loc('interstellar_habitat_title')}</div><div class="has-text-special">${loc('space_habitat_req',[genusVars[races[global.race.species].type].solar.titan, global.resource.Food.name, global.resource.Water.name])}</div>`;
-            },
-            reqs: { titan: 4 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('titan_quarters', offset, 1200000, 1.28); },
-                Furs(offset){ return spaceCostMultiplier('titan_quarters', offset, 85000, 1.28); },
-                Plywood(offset){ return spaceCostMultiplier('titan_quarters', offset, 100000, 1.28); },
-                Horseshoe(){ return global.race['hooved'] ? 1 : 0; }
-            },
-            effect(){
-                let gain = jobScale(1);
-                return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div><div>${loc('plus_max_resource',[jobScale(1),global.race['truepath'] ? loc('job_colonist_tp',[genusVars[races[global.race.species].type].solar.titan]) : loc('colonist')])}</div><div>${loc('plus_max_resource',[gain,loc('citizen')])}</div><div class="has-text-caution">${loc(`spend`,[$(this)[0].support_fuel()[0].a,global.resource[$(this)[0].support_fuel()[0].r].name])}</div><div class="has-text-caution">${loc(`spend`,[$(this)[0].support_fuel()[1].a,global.resource[$(this)[0].support_fuel()[1].r].name])}</div>`;
-            },
-            support(){ return -1; },
-            support_fuel(){ return [{ r: 'Water', a: 12 },{ r: 'Food', a: 500 }]; },
-            powered(){ return powerCostMod(1); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.titan_quarters.count++;
-                    global.civic.titan_colonist.display = true;
-                    if (global.space.electrolysis.support < global.space.electrolysis.s_max){
-                        global.space.titan_quarters.on++;
-                        global.resource[global.race.species].max += jobScale(1);
-                        if (global.civic[global.civic.d_job].workers > 0){
-                            let hired = global.civic[global.civic.d_job].workers - jobScale(1) < 0 ? global.civic[global.civic.d_job].workers : jobScale(1);
-                            global.civic[global.civic.d_job].workers -= hired;
-                            global.civic.titan_colonist.workers += hired;
-                        }
-                    }
-                    return true;
-                }
-                return false;
-            },
-            citizens(){
-                let gain = 1;
-                if (global.race['high_pop']){
-                    gain *= traits.high_pop.vars()[0];
-                }
-                return gain;
-            }
-        },
-        titan_mine: {
-            id: 'space-titan_mine',
-            title: loc('space_red_mine_title'),
-            desc(){
-                return `<div>${loc('space_red_mine_desc')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.titan])}</div>`;
-            },
-            reqs: { titan: 4 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('titan_mine', offset, 475000, 1.28); },
-                Lumber(offset){ return spaceCostMultiplier('titan_mine', offset, 568000, 1.28); },
-                Wrought_Iron(offset){ return spaceCostMultiplier('titan_mine', offset, 250000, 1.28); }
-            },
-            effect(){
-                let adam_val = production('titan_mine','adamantite');
-                let alum_val = production('titan_mine','aluminium');
-                let adamantite = +(adam_val).toFixed(3);
-                let aluminium = +(alum_val).toFixed(3);
-                return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div><div>${loc('space_red_mine_effect',[adamantite,global.resource.Adamantite.name])}</div><div>${loc('space_red_mine_effect',[aluminium,global.resource.Aluminium.name])}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(1); },
-            special(){ return true; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.titan_mine.count++;
-                    global.resource.Adamantite.display = true;
-                    if (global.space.electrolysis.support < global.space.electrolysis.s_max){
-                        global.space.titan_mine.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        storehouse: {
-            id: 'space-storehouse',
-            title: loc('space_storehouse_title'),
-            desc: loc('space_storehouse_title'),
-            reqs: { titan: 5 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('storehouse', offset, 175000, 1.28); },
-                Lumber(offset){ return spaceCostMultiplier('storehouse', offset, 100000, 1.28); },
-                Aluminium(offset){ return spaceCostMultiplier('storehouse', offset, 120000, 1.28); },
-                Cement(offset){ return spaceCostMultiplier('storehouse', offset, 45000, 1.28); }
-            },
-            wide: true,
-            effect(){
-                let storage = '<div class="aTable">';
-                let multiplier = storehouseMultiplier(false);
-                let h_multiplier = storehouseMultiplier(true);
-                if (global.resource.Lumber.display){
-                    let val = sizeApproximation(+(spatialReasoning(3000) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Lumber.name])}</span>`;
-                }
-                if (global.resource.Stone.display){
-                    let val = sizeApproximation(+(spatialReasoning(3000) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Stone.name])}</span>`;
-                }
-                if (global.resource.Chrysotile.display){
-                    let val = sizeApproximation(+(spatialReasoning(3000) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Chrysotile.name])}</span>`;
-                }
-                if (global.resource.Furs.display){
-                    let val = sizeApproximation(+(spatialReasoning(1700) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Furs.name])}</span>`;
-                }
-                if (global.resource.Copper.display){
-                    let val = sizeApproximation(+(spatialReasoning(1520) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Copper.name])}</span>`;
-                }
-                if (global.resource.Iron.display){
-                    let val = sizeApproximation(+(spatialReasoning(1400) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Iron.name])}</span>`;
-                }
-                if (global.resource.Aluminium.display){
-                    let val = sizeApproximation(+(spatialReasoning(1280) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Aluminium.name])}</span>`;
-                }
-                if (global.resource.Cement.display){
-                    let val = sizeApproximation(+(spatialReasoning(1120) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Cement.name])}</span>`;
-                }
-                if (global.resource.Coal.display){
-                    let val = sizeApproximation(+(spatialReasoning(480) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Coal.name])}</span>`;
-                }
-                if (global.resource.Steel.display){
-                    let val = sizeApproximation(+(spatialReasoning(240) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Steel.name])}</span>`;
-                }
-                if (global.resource.Titanium.display){
-                    let val = sizeApproximation(+(spatialReasoning(160) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Titanium.name])}</span>`;
-                }
-                if (global.resource.Alloy.display){
-                    let val = sizeApproximation(+(spatialReasoning(180) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Alloy.name])}</span>`
-                }
-                if (global.resource.Polymer.display){
-                    let val = sizeApproximation(+(spatialReasoning(150) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Polymer.name])}</span>`
-                }
-                if (global.resource.Iridium.display){
-                    let val = sizeApproximation(+(spatialReasoning(175) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Iridium.name])}</span>`
-                }
-                if (global.resource.Nano_Tube.display){
-                    let val = sizeApproximation(+(spatialReasoning(120) * multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Nano_Tube.name])}</span>`
-                }
-                if (global.resource.Neutronium.display){
-                    let val = sizeApproximation(+(spatialReasoning(64) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Neutronium.name])}</span>`
-                }
-                if (global.resource.Adamantite.display){
-                    let val = sizeApproximation(+(spatialReasoning(72) * h_multiplier).toFixed(0),1);
-                    storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Adamantite.name])}</span>`
-                }
-                storage = storage + '</div>';
-                return storage;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.storehouse.count++;
-                    let multiplier = storehouseMultiplier();
-                    global['resource']['Lumber'].max += (spatialReasoning(3000) * multiplier);
-                    global['resource']['Stone'].max += (spatialReasoning(3000) * multiplier);
-                    global['resource']['Furs'].max += (spatialReasoning(1700) * multiplier);
-                    global['resource']['Copper'].max += (spatialReasoning(1520) * multiplier);
-                    global['resource']['Iron'].max += (spatialReasoning(1400) * multiplier);
-                    global['resource']['Aluminium'].max += (spatialReasoning(1280) * multiplier);
-                    global['resource']['Cement'].max += (spatialReasoning(1120) * multiplier);
-                    global['resource']['Coal'].max += (spatialReasoning(480) * multiplier);
-                    global['resource']['Steel'].max += ((spatialReasoning(240) * multiplier));
-                    global['resource']['Titanium'].max += ((spatialReasoning(160) * multiplier));
-                    global['resource']['Alloy'].max += ((spatialReasoning(180) * multiplier));
-                    if (global.resource.Chrysotile.display){
-                        global['resource']['Chrysotile'].max += (spatialReasoning(3000) * multiplier);
-                    }
-                    if (global.resource.Nano_Tube.display){
-                        global['resource']['Nano_Tube'].max += ((spatialReasoning(120) * multiplier));
-                    }
-                    if (global.resource.Neutronium.display){
-                        global['resource']['Neutronium'].max += ((spatialReasoning(64) * multiplier));
-                    }
-                    if (global.resource.Adamantite.display){
-                        global['resource']['Adamantite'].max += ((spatialReasoning(72) * multiplier));
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        titan_bank: {
-            id: 'space-titan_bank',
-            title: loc('city_bank'),
-            desc(){
-                return loc('city_bank_desc',[genusVars[races[global.race.species].type].solar.titan]);
-            },
-            reqs: { titan: 6 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('titan_bank', offset, 2500000, 1.32); },
-                Titanium(offset){ return spaceCostMultiplier('titan_bank', offset, 380000, 1.32); },
-                Neutronium(offset){ return spaceCostMultiplier('titan_bank', offset, 5000, 1.32); }
-            },
-            effect(){
-                let vault = bank_vault() * 2;
-                vault = spatialReasoning(vault);
-                vault = (+(vault).toFixed(0)).toLocaleString();
-                return loc('plus_max_resource',[`\$${vault}`,loc('resource_Money_name')]);
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    global['resource']['Money'].max += spatialReasoning(1800);
-                    global.space.titan_bank.count++;
-                    return true;
-                }
-                return false;
-            }
-        },
-        g_factory: {
-            id: 'space-g_factory',
-            title: loc('interstellar_g_factory_title'),
-            desc(){ return `<div>${loc('interstellar_g_factory_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.titan])}</div>`; },
-            reqs: { graphene: 1 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('g_factory', offset, 950000, 1.28); },
-                Copper(offset){ return spaceCostMultiplier('g_factory', offset, 165000, 1.28); },
-                Stone(offset){ return spaceCostMultiplier('g_factory', offset, 220000, 1.28); },
-                Adamantite(offset){ return spaceCostMultiplier('g_factory', offset, 12500, 1.28); }
-            },
-            effect(){
-                let graphene = 0.05;
-                if (global.race['high_pop']){
-                    graphene = +(highPopAdjust(graphene)).toFixed(3);
-                }
-                return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div><div>${loc('space_red_mine_effect',[graphene,global.resource.Graphene.name])}</div><div>${loc('interstellar_g_factory_effect')}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(1); },
-            special: true,
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.g_factory.count++;
-                    global.resource.Graphene.display = true;
-                    if (global.space.electrolysis.support < global.space.electrolysis.s_max){
-                        global.space.g_factory.on++;
-                        if (global.race['kindling_kindred'] || global.race['smoldering']){
-                            global.space.g_factory.Oil++;
-                        }
-                        else {
-                            global.space.g_factory.Lumber++;
-                        }
-                    }
-                    global.settings.showIndustry = true;
-                    defineIndustry();
-                    return true;
-                }
-                return false;
-            }
-        },
-        sam: {
-            id: 'space-sam',
-            title: loc('space_sam_title'),
-            desc(){
-                return `<div>${loc('space_sam_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { titan: 7 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('sam', offset, 2500000, 1.28); },
-                Steel(offset){ return spaceCostMultiplier('sam', offset, 450000, 1.28); },
-                Elerium(offset){ return spaceCostMultiplier('sam', offset, 120, 1.28); },
-                Brick(offset){ return spaceCostMultiplier('sam', offset, 160000, 1.28); },
-            },
-            effect(){
-                let desc = `<div>${loc('galaxy_defense_platform_effect',[25])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            powered(){ return powerCostMod(5); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.sam.count++;
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.space.sam.on++;
-                    }
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                vBind({el: `#spc_titansynd`},'update');
-            }
-        },
-        decoder: {
-            id: 'space-decoder',
-            title: loc('space_decoder_title'),
-            desc(){
-                return `<div>${loc('space_decoder_title')}</div><div class="has-text-special">${loc('requires_power_support_combo',[genusVars[races[global.race.species].type].solar.titan, global.resource.Cipher.name])}</div>`;
-            },
-            reqs: { titan: 8 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('decoder', offset, 12500000, 1.275); },
-                Elerium(offset){ return spaceCostMultiplier('decoder', offset, 750, 1.275); },
-                Orichalcum(offset){ return spaceCostMultiplier('decoder', offset, 330000, 1.275); },
-                Quantium(offset){ return spaceCostMultiplier('decoder', offset, 180000, 1.275); },
-            },
-            effect(){
-                let cipher = $(this)[0].support_fuel().a;
-                let know = 2500;
-                if (global.race['high_pop']){
-                    know = highPopAdjust(know);
-                }
-                if (p_on['ai_core2']){
-                    know *= 1.25;
-                }
-                let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div>`;
-                desc += `<div>${loc('space_red_exotic_lab_effect1',[know])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('spend',[cipher,global.resource[$(this)[0].support_fuel().r].name])}</div>`;
-            },
-            powered(){ return powerCostMod(1); },
-            support_fuel(){ return { r: 'Cipher', a: 0.06 }; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.decoder.count++;
-                    if (global.space.electrolysis.support < global.space.electrolysis.s_max){
-                        global.space.decoder.on++;
-                    }
-                    return true;
-                }
-                return false;
-            }
-        },
-        ai_core: {
-            id: 'space-ai_core',
-            title: loc('space_ai_core'),
-            desc(wiki){
-                if (!global.space.hasOwnProperty('ai_core') || global.space.ai_core.count < 100 || wiki){
-                    return `<div>${loc('space_ai_core')}</div><div class="has-text-special">${loc('requires_segmemts',[100])}</div>` + (global.space.hasOwnProperty('ai_core') && global.space.ai_core.count >= 100 ? `<div class="has-text-special">${loc('requires_power')}</div>` : ``);
-                }
-                else {
-                    return `<div>${loc('space_ai_core')}</div>`;
+                    return false;
                 }
             },
-            reqs: { titan: 9 },
-            path: ['truepath'],
-            condition(){
-                return global.space.ai_core.count >= 100 ? false : true;
-            },
-            queue_size: 10,
-            queue_complete(){ return 100 - global.space.ai_core.count; },
-            cost: {
-                Money(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 2500000 : 0; },
-                Cement(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 180000 : 0; },
-                Aluminium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 250000 : 0; },
-                Elerium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 250 : 0; },
-                Nano_Tube(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 125000 : 0; },
-                Orichalcum(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 50000 : 0; },
-                Quantium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 100000 : 0; },
-                Cipher(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 750 : 0; },
-            },
-            effect(wiki){
-                let effectText = `<div>${loc('space_ai_core_effect')}</div>`;
-                let count = ((wiki || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0));
-                if (count < 100){
-                    let remain = 100 - count;
-                    effectText += `<div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div>`;
-                }
-                else {
-                    return outerTruth.spc_titan.ai_core2.effect();
-                }
-                return effectText;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    if (global.space.ai_core.count < 100){
-                        global.space.ai_core.count++;
-                        if (global.space.ai_core.count >= 100){
-                            global.tech['titan_ai_core'] = 1;
-                            global.space['ai_core2'] = { count: 1, on: 0 };
-                            if (global.city.power >= outerTruth.spc_titan.ai_core2.powered()){
-                                global.space.ai_core2.on++;
-                            }
-                            renderSpace();
-                            drawTech();
+            titan_spaceport: {
+                id: 'space-titan_spaceport',
+                title: loc('space_red_spaceport_title'),
+                desc: `<div>${loc('space_red_spaceport_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`,
+                reqs: { titan: 1 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('titan_spaceport', offset, 2500000, 1.32); },
+                    Lumber(offset){ return spaceCostMultiplier('titan_spaceport', offset, 750000, 1.32); },
+                    Cement(offset){ return spaceCostMultiplier('titan_spaceport', offset, 350000, 1.32); },
+                    Mythril(offset){ return spaceCostMultiplier('titan_spaceport', offset, 10000, 1.32); }
+                },
+                effect(){
+                    let water = global.resource.Water.display ? `<div>${loc('plus_max_resource',[sizeApproximation(spatialReasoning(250)),global.resource.Water.name])}</div>` : ``;
+                    let support = global.tech['enceladus'] && global.tech.enceladus >= 2 ? `<div>+${loc(`galaxy_alien2_support`,[$(this)[0].support(),genusVars[races[global.race.species].type].solar.enceladus])}</div>` : ``;
+                    let storage = global.tech['titan'] && global.tech.titan >= 5 ? `<div>${loc(`space_titan_spaceport_storage`,[25])}</div>` : ``;
+                    return `${support}${water}${storage}<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                support(){ return 2; },
+                powered(){ return powerCostMod(10); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.titan_spaceport.count++;
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.space.titan_spaceport.on++;
                         }
                         return true;
                     }
-                }
-                return false;
-            }
-        },
-        ai_core2: {
-            id: 'space-ai_core2',
-            title: loc('space_ai_core'),
-            desc(){
-                return `<div>${loc('space_ai_core')}</div><div class="has-text-special">${loc('space_electrolysis_req',[global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            reqs: { titan_ai_core: 1 },
-            path: ['truepath'],
-            condition(){
-                return global.space.hasOwnProperty('ai_core') && global.space.ai_core.count >= 100 ? true : false;
-            },
-            wiki: false,
-            queue_complete(){ return 0; },
-            cost: {},
-            powered(){
-                return powerCostMod(100);
-            },
-            p_fuel(){ return { r: 'Water', a: 1000 }; },
-            effect(){
-                let value = 25;
-                let desc = `<div class="has-text-warning">${loc('interstellar_citadel_stat',[+(quantum_level).toFixed(1)])}</div>`;
-                desc += `<div>${loc('interstellar_citadel_effect',[value])}</div><div>${loc('space_ai_core_effect2',[value])}</div>`;
-                if (global.tech['titan_ai_core'] && global.tech.titan_ai_core >= 2){
-                    desc += `<div>${loc('space_ai_core_effect3',[50])}</div>`;
-                }
-                desc += `<div class="has-text-caution">${loc('space_electrolysis_use',[$(this)[0].p_fuel().a,global.resource[$(this)[0].p_fuel().r].name,$(this)[0].powered()])}</div>`;
-                if (global.tech['titan_ai_core'] && global.tech.titan_ai_core >= 3){
-                    let drift = +calcAIDrift().toFixed(1);
-                    desc += `<div class="has-text-advanced">${loc('space_ai_core_effect4',[drift])}</div>`;
-                }
-                return desc;
-            },
-            action(){
-                return false;
-            },
-            flair(){
-                return global.space.hasOwnProperty('ai_core2') && global.space.ai_core2.on >= 1 ? loc(`space_ai_core_flair`) : loc(`space_ai_core_flair2`);
-            }
-        },
-        ai_colonist: {
-            id: 'space-ai_colonist',
-            title: loc('space_ai_colonist_title'),
-            desc(){
-                return `<div>${loc('space_ai_colonist_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
-            },
-            reqs: { titan_ai_core: 3 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('ai_colonist', offset, 112000000, 1.35); },
-                Alloy(offset){ return spaceCostMultiplier('ai_colonist', offset, 750000, 1.35); },
-                Elerium(offset){ return spaceCostMultiplier('ai_colonist', offset, 500, 1.35); },
-                Nano_Tube(offset){ return spaceCostMultiplier('ai_colonist', offset, 525000, 1.35); },
-                Quantium(offset){ return spaceCostMultiplier('ai_colonist', offset, 150000, 1.35); },
-                Cipher(offset){ return spaceCostMultiplier('ai_colonist', offset, 10000, 1.35); },
-            },
-            effect(){
-                return `<div>${loc('plus_max_resource',[jobScale(1),global.race['truepath'] ? loc('job_colonist_tp',[genusVars[races[global.race.species].type].solar.titan]) : loc('colonist')])}</div><div>${loc('space_ai_colonist_effect',[jobScale(1),genusVars[races[global.race.species].type].solar.titan])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            powered(){ return powerCostMod(10); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.ai_colonist.count++;
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.space.ai_colonist.on++;
+                    return false;
+                },
+                post(){
+                    if (global.tech['titan'] === 1){
+                        global.tech['titan'] = 2;
+                        drawTech();
                     }
-                    return true;
                 }
-                return false;
             },
-            flair: loc(`tech_combat_droids_flair`)
-        },
-    },
-    spc_enceladus: {
-        info: {
-            name(){
-                return genusVars[races[global.race.species].type].solar.enceladus;
-            },
-            desc(){
-                return loc('space_enceladus_info_desc',[genusVars[races[global.race.species].type].solar.enceladus, races[global.race.species].home]);
-            },
-            support: 'titan_spaceport',
-            zone: 'outer',
-            syndicate(){ return global.tech['titan'] && global.tech.titan >= 3 && global.tech['enceladus'] && global.tech.enceladus >= 2 ? true : false; },
-            syndicate_cap(){
-                if (global.tech['triton']){
-                    return global.tech.outer >= 4 ? 1500 : 1000;
-                }
-                return 600;
-            }
-        },
-        enceladus_mission: {
-            id: 'space-enceladus_mission',
-            title(){
-                return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.enceladus]);
-            },
-            desc(){
-                return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.enceladus]);
-            },
-            reqs: { outer: 1 },
-            grant: ['enceladus',1],
-            path: ['truepath'],
-            queue_complete(){ return global.tech.enceladus >= 1 ? 0 : 1; },
-            cost: {
-                Helium_3(offset,wiki){ return +fuel_adjust(250000,false,wiki).toFixed(0); },
-                Elerium(){ return 100; }
-            },
-            effect(){
-                return loc('space_titan_mission_effect',[genusVars[races[global.race.species].type].solar.enceladus]);
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('space_enceladus_mission_action',[genusVars[races[global.race.species].type].solar.enceladus]),'info',false,['progress']);
-                    global.resource.Water.display = true;
-                    return true;
-                }
-                return false;
-            }
-        },
-        water_freighter: {
-            id: 'space-water_freighter',
-            title: loc('space_water_freighter_title'),
-            desc(){
-                return `<div>${loc('space_water_freighter_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
-            },
-            reqs: { enceladus: 2 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('water_freighter', offset, 450000, 1.25); },
-                Iron(offset){ return spaceCostMultiplier('water_freighter', offset, 362000, 1.25); },
-                Nano_Tube(offset){ return spaceCostMultiplier('water_freighter', offset, 125000, 1.25); },
-                Sheet_Metal(offset){ return spaceCostMultiplier('water_freighter', offset, 75000, 1.25); }
-            },
-            effect(wiki){
-                let helium = +fuel_adjust(5,true,wiki).toFixed(2);
-                let water = +(production('water_freighter')).toFixed(2);
-                return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div><div>${loc('produce',[water,global.resource.Water.name])}</div><div class="has-text-caution">${loc(`space_belt_station_effect3`,[helium])}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(1); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.water_freighter.count++;
-                    if (global.space.titan_spaceport.support < global.space.titan_spaceport.s_max){
-                        global.space.water_freighter.on++;
+            electrolysis: {
+                id: 'space-electrolysis',
+                title: loc('space_electrolysis_title'),
+                desc(){ return `<div>${loc('space_electrolysis_title')}</div><div class="has-text-special">${loc('space_electrolysis_req',[global.resource.Water.name])}</div>`; },
+                reqs: { titan: 3 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('electrolysis', offset, 1000000, 1.25); },
+                    Copper(offset){ return spaceCostMultiplier('electrolysis', offset, 185000, 1.25); },
+                    Steel(offset){ return spaceCostMultiplier('electrolysis', offset, 220000, 1.25); },
+                    Polymer(offset){ return spaceCostMultiplier('electrolysis', offset, 380000, 1.25); }
+                },
+                effect(){
+                    let support = `<div>+${loc(`galaxy_alien2_support`,[$(this)[0].support(),genusVars[races[global.race.species].type].solar.titan])}</div>`;
+                    return `${support}<div class="has-text-caution">${loc('space_electrolysis_use',[$(this)[0].support_fuel().a,global.resource.Water.name,$(this)[0].powered()])}</div>`;
+                },
+                support(){
+                    return global.tech['titan_ai_core'] && global.tech.titan_ai_core >= 2 && p_on['ai_core2'] ? 3 : 2;
+                },
+                support_fuel(){ return { r: 'Water', a: 35 }; },
+                powered(){ return powerCostMod(8); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.electrolysis.count++;
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.space.electrolysis.on++;
+                        }
+                        return true;
                     }
-                    return true;
-                }
-                return false;
-            }
-        },
-        zero_g_lab: {
-            id: 'space-zero_g_lab',
-            title: loc('tech_zero_g_lab'),
-            desc(){
-                return `<div>${loc('tech_zero_g_lab')}</div><div class="has-text-special">${loc('requires_power_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
-            },
-            reqs: { enceladus: 3 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('zero_g_lab', offset, 5000000, 1.25); },
-                Alloy(offset){ return spaceCostMultiplier('zero_g_lab', offset, 125000, 1.25); },
-                Graphene(offset){ return spaceCostMultiplier('zero_g_lab', offset, 225000, 1.25); },
-                Stanene(offset){ return spaceCostMultiplier('zero_g_lab', offset, 600000, 1.25); }
-            },
-            effect(){
-                let synd = syndicate('spc_enceladus');
-                let know = Math.round(10000 * synd);
-
-                let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div><div>${loc('city_max_knowledge',[know])}</div>`;
-                if (global.resource.Quantium.display){
-                    desc = desc + `<div>${loc('space_zero_g_lab_effect',[jobScale(1)])}</div>`;
-                }
-                if (global.resource.Cipher.display){
-                    desc = desc + `<div>${loc('plus_max_resource',[10000,global.resource.Cipher.name])}</div>`;
-                }
-                return desc + `<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(12); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.zero_g_lab.count++;
-                    if (global.space.titan_spaceport.support < global.space.titan_spaceport.s_max){
-                        global.space.zero_g_lab.on++;
+                    return false;
+                },
+                post(){
+                    if (global.tech['titan'] === 3){
+                        global.tech['titan'] = 4;
+                        drawTech();
                     }
-                    return true;
                 }
-                return false;
-            }
-        },
-        operating_base: {
-            id: 'space-operating_base',
-            title: loc('tech_operating_base'),
-            desc(){
-                return `<div>${loc('tech_operating_base')}</div><div class="has-text-special">${loc('requires_power_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
             },
-            reqs: { enceladus: 4 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('operating_base', offset, 7500000, 1.3); },
-                Furs(offset){ return spaceCostMultiplier('operating_base', offset, 500000, 1.3); },
-                Adamantite(offset){ return spaceCostMultiplier('operating_base', offset, 375000, 1.3); },
-                Stanene(offset){ return spaceCostMultiplier('operating_base', offset, 750000, 1.3); },
-                Mythril(offset){ return spaceCostMultiplier('operating_base', offset, 225000, 1.3); },
-                Horseshoe(){ return global.race['hooved'] ? 4 : 0; }
-            },
-            effect(){
-                let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
-                desc += `<div>${loc('galaxy_defense_platform_effect',[50])}</div>`;
-                desc += loc('plus_max_resource',[jobScale(4),loc('civics_garrison_soldiers')]);
-                return desc + `<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(10); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.operating_base.count++;
-                    if (global.space.titan_spaceport.support < global.space.titan_spaceport.s_max){
-                        global.space.operating_base.on++;
+            hydrogen_plant: {
+                id: 'space-hydrogen_plant',
+                title: loc('space_hydrogen_plant_title'),
+                desc(){ return `<div>${loc('space_hydrogen_plant_title')}</div><div class="has-text-special">${loc('space_hydrogen_plant_req')}</div>`; },
+                reqs: { titan_power: 1 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 1500000, 1.28); },
+                    Iridium(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 292000, 1.28); },
+                    Stanene(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 599000, 1.28); },
+                    Cement(offset){ return spaceCostMultiplier('hydrogen_plant', offset, 180000, 1.28); }
+                },
+                effect(){
+                    return `<span>${loc('space_dwarf_reactor_effect1',[-($(this)[0].powered())])}</span>, <span class="has-text-caution">${loc('space_hydrogen_plant_effect',[1,loc('space_electrolysis_title')])}</span>`;
+                },
+                support(){
+                    return 2;
+                },
+                powered(){ return powerModifier(-22); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.hydrogen_plant.count++;
+                        if (global.space.electrolysis.on > global.space.hydrogen_plant.on){
+                            global.space.hydrogen_plant.on++;
+                        }
+                        return true;
                     }
-                    return true;
+                    return false;
                 }
-                return false;
             },
-            post(){
-                vBind({el: `#spc_enceladussynd`},'update');
-            }
-        },
-        munitions_depot: {
-            id: 'space-munitions_depot',
-            title: loc('tech_munitions_depot'),
-            desc: loc('tech_munitions_depot'),
-            category: 'storage',
-            era: 'solar',
-            reqs: { enceladus: 5 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('munitions_depot', offset, 5000000, 1.22); },
-                Iron(offset){ return spaceCostMultiplier('munitions_depot', offset, 185000, 1.22); },
-                Sheet_Metal(offset){ return spaceCostMultiplier('munitions_depot', offset, 100000, 1.22); },
-            },
-            effect(){
-                let containers = 25;
-                return `<div>${loc('plus_max_crates',[containers])}</div><div>${loc('plus_max_containers',[containers])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.munitions_depot.count++;
-                    global.resource.Crates.max += 25;
-                    global.resource.Containers.max += 25;
-                    return true;
-                }
-                return false;
-            }
-        }
-    },
-    spc_triton: {
-        info: {
-            name(){
-                return genusVars[races[global.race.species].type].solar.triton;
-            },
-            desc(){
-                return loc('space_triton_info_desc',[genusVars[races[global.race.species].type].solar.triton, races[global.race.species].home]);
-            },
-            zone: 'outer',
-            syndicate(){ return global.tech['triton'] && global.tech.triton >= 2 ? true : false; },
-            syndicate_cap(){ return global.tech['outer'] && global.tech.outer >= 4 ? 5000 : 3000; },
-            extra(region){
-                if (global.tech['triton'] && global.tech.triton >= 3){
-                    $(`#${region}`).append(`<div id="${region}resist" v-show="${region}" class="syndThreat has-text-caution">${loc('space_ground_resist')} <span class="has-text-danger" v-html="threat(enemy,troops)"></span></div>`);
-                    vBind({
-                        el: `#${region}resist`,
-                        data: global.space.fob,
-                        methods: {
-                            threat(e,t){
-                                let wounded = global.civic.garrison.wounded - garrisonSize();
-                                if (wounded < 0){ wounded = 0; }
-                                let d = +(e - armyRating(t,'army',wounded)).toFixed(0);
-                                return d < 0 ? 0 : d;
+            titan_quarters: {
+                id: 'space-titan_quarters',
+                title: loc('interstellar_habitat_title'),
+                desc(){
+                    return `<div>${loc('interstellar_habitat_title')}</div><div class="has-text-special">${loc('space_habitat_req',[genusVars[races[global.race.species].type].solar.titan, global.resource.Food.name, global.resource.Water.name])}</div>`;
+                },
+                reqs: { titan: 4 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('titan_quarters', offset, 1200000, 1.28); },
+                    Furs(offset){ return spaceCostMultiplier('titan_quarters', offset, 85000, 1.28); },
+                    Plywood(offset){ return spaceCostMultiplier('titan_quarters', offset, 100000, 1.28); },
+                    Horseshoe(){ return global.race['hooved'] ? 1 : 0; }
+                },
+                effect(){
+                    let gain = jobScale(1);
+                    return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div><div>${loc('plus_max_resource',[jobScale(1),global.race['truepath'] ? loc('job_colonist_tp',[genusVars[races[global.race.species].type].solar.titan]) : loc('colonist')])}</div><div>${loc('plus_max_resource',[gain,loc('citizen')])}</div><div class="has-text-caution">${loc(`spend`,[$(this)[0].support_fuel()[0].a,global.resource[$(this)[0].support_fuel()[0].r].name])}</div><div class="has-text-caution">${loc(`spend`,[$(this)[0].support_fuel()[1].a,global.resource[$(this)[0].support_fuel()[1].r].name])}</div>`;
+                },
+                support(){ return -1; },
+                support_fuel(){ return [{ r: 'Water', a: 12 },{ r: 'Food', a: 500 }]; },
+                powered(){ return powerCostMod(1); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.titan_quarters.count++;
+                        global.civic.titan_colonist.display = true;
+                        if (global.space.electrolysis.support < global.space.electrolysis.s_max){
+                            global.space.titan_quarters.on++;
+                            global.resource[global.race.species].max += jobScale(1);
+                            if (global.civic[global.civic.d_job].workers > 0){
+                                let hired = global.civic[global.civic.d_job].workers - jobScale(1) < 0 ? global.civic[global.civic.d_job].workers : jobScale(1);
+                                global.civic[global.civic.d_job].workers -= hired;
+                                global.civic.titan_colonist.workers += hired;
                             }
                         }
-                    });
-                }
-            }
-        },
-        triton_mission: {
-            id: 'space-triton_mission',
-            title(){
-                return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.triton]);
-            },
-            desc(){
-                return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.triton]);
-            },
-            reqs: { outer: 2 },
-            grant: ['triton',1],
-            path: ['truepath'],
-            queue_complete(){ return global.tech.triton >= 1 ? 0 : 1; },
-            cost: {
-                Helium_3(offset,wiki){ return +fuel_adjust(600000,false,wiki).toFixed(0); },
-                Elerium(){ return 2500; }
-            },
-            effect(){
-                return loc('space_triton_mission_effect',[genusVars[races[global.race.species].type].solar.triton]);
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    messageQueue(loc('space_triton_mission_action',[genusVars[races[global.race.species].type].solar.triton]),'info',false,['progress']);
-                    global.space.syndicate['spc_triton'] = 1250;
-                    global.space.syndicate['spc_titan'] += 250;
-                    global.space.syndicate['spc_enceladus'] += 250;
-                    return true;
-                }
-                return false;
-            }
-        },
-        fob: {
-            id: 'space-fob',
-            title: loc('space_fob_title'),
-            desc(){
-                return `<div>${loc('tech_fob')}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Helium_3.name])}</div>`;
-            },
-            reqs: { triton: 2 },
-            path: ['truepath'],
-            queue_complete(){ return 1 - global.space.fob.count; },
-            cost: {
-                Money(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1  ? 0 : spaceCostMultiplier('fob', offset, 250000000, 1.1); },
-                Copper(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 8000000, 1.1); },
-                Uranium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 50000, 1.1); },
-                Nano_Tube(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 2500000, 1.1); },
-                Graphene(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 3000000, 1.1); },
-                Sheet_Metal(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 7500000, 1.1); },
-                Quantium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 500000, 1.1); },
-                Horseshoe(offset){ return global.race['hooved'] && ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) < 1 ? 10 : 0; }
-            },
-            effect(wiki){
-                let troops = garrisonSize();
-                let max_troops = garrisonSize(true);
-                let desc = `<div>${loc('galaxy_defense_platform_effect',[500])}</div>`;
-                desc += loc('plus_max_resource',[jobScale(10),loc('civics_garrison_soldiers')]);
-                desc += `<div class="has-text-warning"><span class="soldier">${loc('civics_garrison_soldiers')}:</span> <span>${troops}</span> / <span>${max_troops}<span></div>`;
-                desc += `<div class="has-text-warning"><span class="wounded">${loc('civics_garrison_wounded')}:</span> <span>${global.civic['garrison'] ? global.civic.garrison.wounded : 0}</span></div>`;
-                desc += `<div class="has-text-warning">${loc('space_fob_landed',[global.space['fob'] ? global.space.fob.troops : 0])}</div>`;
-                let helium = +(fuel_adjust(125,true,wiki)).toFixed(2);
-                return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),helium,global.resource.Helium_3.name])}</div>`;
-            },
-            powered(){ return powerCostMod(50); },
-            action(){
-                if (global.space.fob.count < 1 && payCosts($(this)[0])){
-                    global.space.fob.count++;
-                    if (global.city.power >= $(this)[0].powered()){
-                        global.space.fob.on++;
+                        return true;
                     }
-                    return true;
-                }
-                return false;
-            },
-            post(){
-                if (global.tech['triton'] === 2){
-                    global.tech['triton'] = 3;
-                    drawTech();
-                    renderSpace();
-                    messageQueue(loc('space_fob_msg'),'info',false,['progress']);
-                }
-            }
-        },
-        lander: {
-            id: 'space-lander',
-            title: loc('space_lander_title'),
-            desc(){
-                return `<div>${loc('space_lander_title')}</div><div class="has-text-special">${loc('requires_soldiers')}</div><div class="has-text-special">${loc('space_red_space_barracks_desc_req')}</div>`;
-            },
-            reqs: { triton: 3 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('lander', offset, 2400000, 1.15); },
-                Aluminium(offset){ return spaceCostMultiplier('lander', offset, 185000, 1.15); },
-                Neutronium(offset){ return spaceCostMultiplier('lander', offset, 10000, 1.15); },
-                Nano_Tube(offset){ return spaceCostMultiplier('lander', offset, 158000, 1.15); },
-            },
-            powered(){ return powerCostMod(1); },
-            effect(wiki){
-                let oil = +fuel_adjust(50,true,wiki).toFixed(2);
-                let data = ``;
-                if (global.space['crashed_ship'] && global.space.crashed_ship.count === 100){
-                    data = `<div>${loc(`space_lander_effect3`,[production('lander'),global.resource.Cipher.name])}</div>`;
-                }
-                return `<div>${loc('space_lander_effect',[genusVars[races[global.race.species].type].solar.triton])}</div>${data}<div class="has-text-warning">${loc(`space_lander_effect2`,[jobScale(3)])}</div><div class="has-text-caution">${loc('space_red_space_barracks_effect2',[oil])}</div>`;
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.lander.count++;
-                    global.space.lander.on++;
-                    return true;
-                }
-                return false;
-            }
-        },
-        crashed_ship: {
-            id: 'space-crashed_ship',
-            title: loc('space_crashed_ship_title'),
-            desc(){
-                return `<div>${loc('space_crashed_ship_title')}</div>`;
-            },
-            reqs: { triton: 3 },
-            path: ['truepath'],
-            queue_complete(){ return 0; },
-            cost: {},
-            effect(){
-                let control = global.space['crashed_ship'] ? global.space.crashed_ship.count : 0;
-                return `<div>${loc(`space_crashed_ship_effect`,[control])}</div>`;
-            },
-            action(){
-                return false;
-            }
-        },
-    },
-    spc_kuiper: {
-        info: {
-            name(){
-                return loc(`space_kuiper_title`);
-            },
-            desc(){
-                return loc('space_kuiper_desc');
-            },
-            zone: 'outer',
-            syndicate(){ return global.tech['kuiper'] ? true : false; },
-            syndicate_cap(){ return 2500; },
-        },
-        kuiper_mission: {
-            id: 'space-kuiper_mission',
-            title(){
-                return loc('space_mission_title',[loc(`space_kuiper_title`)]);
-            },
-            desc(){
-                return loc('space_mission_desc',[loc(`space_kuiper_title`)]);
-            },
-            reqs: { outer: 7 },
-            grant: ['kuiper',1],
-            path: ['truepath'],
-            queue_complete(){ return global.tech.kuiper >= 1 ? 0 : 1; },
-            cost: {
-                Helium_3(offset,wiki){ return +fuel_adjust(1000000,false,wiki).toFixed(0); },
-                Elerium(){ return 1000; }
-            },
-            effect(){
-                return loc('space_kuiper_mission_effect');
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space['orichalcum_mine'] = { count: 0, on: 0 };
-                    global.space['uranium_mine'] = { count: 0, on: 0 };
-                    global.space['neutronium_mine'] = { count: 0, on: 0 };
-                    global.space.syndicate['spc_kuiper'] = 500;
-                    messageQueue(loc('space_kuiper_mission_action'),'info',false,['progress']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        orichalcum_mine: {
-            id: 'space-orichalcum_mine',
-            title(){ return loc('space_kuiper_mine',[global.resource.Orichalcum.name]); },
-            desc(){
-                return `<div>${loc('space_kuiper_mine',[global.resource.Orichalcum.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
-            },
-            reqs: { kuiper: 1 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 25000000, 1.25); },
-                Graphene(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 900000, 1.25); },
-                Elerium(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 200, 1.25); },
-                Mythril(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 450000, 1.25); },
-                Quantium(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 150000, 1.25); },
-            },
-            effect(wiki){
-                let mineral = +(production('orichalcum_mine')).toFixed(3);
-                let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
-                let desc = `<div>${loc('gain',[mineral,loc('resource_Orichalcum_name')])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            powered(){ return powerCostMod(10); },
-            p_fuel(){ return { r: 'Oil', a: 200 }; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.orichalcum_mine.count++;
-                    global.resource.Orichalcum.display = true;
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.space.orichalcum_mine.on++;
+                    return false;
+                },
+                citizens(){
+                    let gain = 1;
+                    if (global.race['high_pop']){
+                        gain *= traits.high_pop.vars()[0];
                     }
-                    return true;
+                    return gain;
                 }
-                return false;
-            }
-        },
-        uranium_mine: {
-            id: 'space-uranium_mine',
-            title(){ return loc('space_kuiper_mine',[global.resource.Uranium.name]); },
-            desc(){
-                return `<div>${loc('space_kuiper_mine',[global.resource.Uranium.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
             },
-            reqs: { kuiper: 1 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('uranium_mine', offset, 5000000, 1.25); },
-                Iridium(offset){ return spaceCostMultiplier('uranium_mine', offset, 250000, 1.25); },
-                Steel(offset){ return spaceCostMultiplier('uranium_mine', offset, 620000, 1.25); }
-            },
-            effect(wiki){
-                let mineral = +(production('uranium_mine')).toFixed(3);
-                let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
-                let desc = `<div>${loc('gain',[mineral,loc('resource_Uranium_name')])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            powered(){ return powerCostMod(5); },
-            p_fuel(){ return { r: 'Oil', a: 60 }; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.uranium_mine.count++;
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.space.uranium_mine.on++;
+            titan_mine: {
+                id: 'space-titan_mine',
+                title: loc('space_red_mine_title'),
+                desc(){
+                    return `<div>${loc('space_red_mine_desc')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.titan])}</div>`;
+                },
+                reqs: { titan: 4 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('titan_mine', offset, 475000, 1.28); },
+                    Lumber(offset){ return spaceCostMultiplier('titan_mine', offset, 568000, 1.28); },
+                    Wrought_Iron(offset){ return spaceCostMultiplier('titan_mine', offset, 250000, 1.28); }
+                },
+                effect(){
+                    let adam_val = production('titan_mine','adamantite');
+                    let alum_val = production('titan_mine','aluminium');
+                    let adamantite = +(adam_val).toFixed(3);
+                    let aluminium = +(alum_val).toFixed(3);
+                    return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div><div>${loc('space_red_mine_effect',[adamantite,global.resource.Adamantite.name])}</div><div>${loc('space_red_mine_effect',[aluminium,global.resource.Aluminium.name])}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(1); },
+                special(){ return true; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.titan_mine.count++;
+                        global.resource.Adamantite.display = true;
+                        if (global.space.electrolysis.support < global.space.electrolysis.s_max){
+                            global.space.titan_mine.on++;
+                        }
+                        return true;
                     }
-                    return true;
+                    return false;
                 }
-                return false;
-            }
-        },
-        neutronium_mine: {
-            id: 'space-neutronium_mine',
-            title(){ return loc('space_kuiper_mine',[global.resource.Neutronium.name]); },
-            desc(){
-                return `<div>${loc('space_kuiper_mine',[global.resource.Neutronium.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
             },
-            reqs: { kuiper: 1 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('neutronium_mine', offset, 8000000, 1.25); },
-                Adamantite(offset){ return spaceCostMultiplier('neutronium_mine', offset, 650000, 1.25); },
-                Stanene(offset){ return spaceCostMultiplier('neutronium_mine', offset, 1250000, 1.25); },
-            },
-            effect(wiki){
-                let mineral = +(production('neutronium_mine')).toFixed(3);
-                let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
-                let desc = `<div>${loc('gain',[mineral,loc('resource_Neutronium_name')])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            powered(){ return powerCostMod(8); },
-            p_fuel(){ return { r: 'Oil', a: 60 }; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.neutronium_mine.count++;
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.space.neutronium_mine.on++;
+            storehouse: {
+                id: 'space-storehouse',
+                title: loc('space_storehouse_title'),
+                desc: loc('space_storehouse_title'),
+                reqs: { titan: 5 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('storehouse', offset, 175000, 1.28); },
+                    Lumber(offset){ return spaceCostMultiplier('storehouse', offset, 100000, 1.28); },
+                    Aluminium(offset){ return spaceCostMultiplier('storehouse', offset, 120000, 1.28); },
+                    Cement(offset){ return spaceCostMultiplier('storehouse', offset, 45000, 1.28); }
+                },
+                wide: true,
+                effect(){
+                    let storage = '<div class="aTable">';
+                    let multiplier = storehouseMultiplier(false);
+                    let h_multiplier = storehouseMultiplier(true);
+                    if (global.resource.Lumber.display){
+                        let val = sizeApproximation(+(spatialReasoning(3000) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Lumber.name])}</span>`;
                     }
-                    return true;
-                }
-                return false;
-            }
-        },
-        elerium_mine: {
-            id: 'space-elerium_mine',
-            title(){ return loc('space_kuiper_mine',[global.resource.Elerium.name]); },
-            desc(){
-                return `<div>${loc('space_kuiper_mine',[global.resource.Elerium.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
-            },
-            reqs: { kuiper: 2 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('elerium_mine', offset, 20000000, 1.25); },
-                Titanium(offset){ return spaceCostMultiplier('elerium_mine', offset, 250000, 1.25); },
-                Neutronium(offset){ return spaceCostMultiplier('elerium_mine', offset, 120000, 1.25); },
-                Orichalcum(offset){ return spaceCostMultiplier('elerium_mine', offset, 175000, 1.25); },
-            },
-            effect(wiki){
-                let mineral = +(production('elerium_mine')).toFixed(3);
-                let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
-                let desc = `<div>${loc('gain',[mineral,loc('resource_Elerium_name')])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            powered(){ return powerCostMod(12); },
-            p_fuel(){ return { r: 'Oil', a: 125 }; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.elerium_mine.count++;
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.space.elerium_mine.on++;
+                    if (global.resource.Stone.display){
+                        let val = sizeApproximation(+(spatialReasoning(3000) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Stone.name])}</span>`;
                     }
-                    return true;
-                }
-                return false;
-            }
-        },
-    },
-    spc_eris: {
-        info: {
-            name(){
-                return genusVars[races[global.race.species].type].solar.eris;
-            },
-            desc(){
-                return loc('space_eris_info_desc',[genusVars[races[global.race.species].type].solar.eris]);
-            },
-            support: 'drone_control',
-            zone: 'outer',
-            syndicate(){ return global.tech['eris'] ? true : false; },
-            syndicate_cap(){ return 7500; },
-            extra(region){
-                if (global.tech['eris'] && global.tech['eris'] === 1){
-                    $(`#${region}`).append(`<div id="${region}scanned" v-show="${region}" class="syndThreat has-text-caution">${loc('space_scanned')} <span class="has-text-info">{{ eris_scan }}%</span></div>`);
-                    vBind({
-                        el: `#${region}scanned`,
-                        data: global.tech
-                    });
-                }
-            }
-        },
-        eris_mission: {
-            id: 'space-eris_mission',
-            title(){
-                return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.eris]);
-            },
-            desc(){
-                return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.eris]);
-            },
-            reqs: { outer: 7 },
-            grant: ['eris',1],
-            path: ['truepath'],
-            queue_complete(){ return global.tech.eris >= 1 ? 0 : 1; },
-            cost: {
-                Helium_3(offset,wiki){ return +fuel_adjust(1250000,false,wiki).toFixed(0); },
-                Elerium(){ return 1250; }
-            },
-            effect(){
-                return loc('space_eris_mission_effect',[genusVars[races[global.race.species].type].solar.eris]);
-            },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.syndicate['spc_eris'] = 4000;
-                    messageQueue(loc('space_eris_mission_action',[genusVars[races[global.race.species].type].solar.eris]),'info',false,['progress']);
-                    return true;
-                }
-                return false;
-            }
-        },
-        drone_control: {
-            id: 'space-drone_control',
-            title(){ return loc('space_drone_control',[genusVars[races[global.race.species].type].solar.titan]); },
-            desc(){
-                return `<div>${loc('space_drone_control',[genusVars[races[global.race.species].type].solar.titan])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            reqs: { eris: 3 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('drone_control', offset, 75000000, 1.3); },
-                Neutronium(offset){ return spaceCostMultiplier('drone_control', offset, 100000, 1.3); },
-                Stanene(offset){ return spaceCostMultiplier('drone_control', offset, 450000, 1.3); },
-                Quantium(offset){ return spaceCostMultiplier('drone_control', offset, 300000, 1.3); },
-            },
-            effect(){
-                let fuel = $(this)[0].p_fuel().a;
-                let desc = `<div>+${loc(`galaxy_alien2_support`,[$(this)[0].support(),genusVars[races[global.race.species].type].solar.eris])}</div>`;
-                return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
-            },
-            support(){ return 5; },
-            powered(){ return powerCostMod(25); },
-            p_fuel(){ return { r: 'Uranium', a: 5 }; },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.drone_control.count++;
-                    if (global.city.powered && global.city.power >= $(this)[0].powered()){
-                        global.space.drone_control.on++;
+                    if (global.resource.Chrysotile.display){
+                        let val = sizeApproximation(+(spatialReasoning(3000) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Chrysotile.name])}</span>`;
                     }
-                    return true;
-                }
-                return false;
-            }
-        },
-        shock_trooper: {
-            id: 'space-shock_trooper',
-            title: loc('space_shock_trooper_title'),
-            desc(){
-                return `<div>${loc('space_shock_trooper_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
-            },
-            reqs: { eris: 3 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('shock_trooper', offset, 4250000, 1.225); },
-                Polymer(offset){ return spaceCostMultiplier('shock_trooper', offset, 375000, 1.225); },
-                Adamantite(offset){ return spaceCostMultiplier('shock_trooper', offset, 500000, 1.225); },
-                Graphene(offset){ return spaceCostMultiplier('shock_trooper', offset, 220000, 1.225); },
-                Elerium(offset){ return spaceCostMultiplier('shock_trooper', offset, 350, 1.225); },
-            },
-            effect(){
-                let rating = Math.round(armyRating(1,'army',0) * syndicate('spc_eris'));
-                let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
-                if (global.space['digsite'] && global.space.digsite.count === 100){
-                    desc = `<div>${loc(`space_lander_effect3`,[production('shock_trooper'),global.resource.Cipher.name])}</div>`;
-                }
-                return desc + `<div>${loc(`space_digsite_offense`,[rating])}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(1); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.shock_trooper.count++;
-                    if (global.space.drone_control.support < global.space.drone_control.s_max){
-                        global.space.shock_trooper.on++;
+                    if (global.resource.Furs.display){
+                        let val = sizeApproximation(+(spatialReasoning(1700) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Furs.name])}</span>`;
                     }
-                    return true;
-                }
-                return false;
-            }
-        },
-        tank: {
-            id: 'space-tank',
-            title: loc('space_tank_title'),
-            desc(){
-                return `<div>${loc('space_tank_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
-            },
-            reqs: { eris: 4 },
-            path: ['truepath'],
-            cost: {
-                Money(offset){ return spaceCostMultiplier('tank', offset, 100000000, 1.25); },
-                Alloy(offset){ return spaceCostMultiplier('tank', offset, 1250000, 1.25); },
-                Orichalcum(offset){ return spaceCostMultiplier('tank', offset, 600000, 1.25); },
-                Mythril(offset){ return spaceCostMultiplier('tank', offset, 500000, 1.25); },
-                Uranium(offset){ return spaceCostMultiplier('tank', offset, 25000, 1.25); },
-            },
-            effect(){
-                let rating = Math.round(100 * syndicate('spc_eris'));
-                let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
-                if (global.space['digsite'] && global.space.digsite.count === 100){
-                    desc = `<div>${loc(`space_lander_effect3`,[production('tank'),global.resource.Cipher.name])}</div>`;
-                }
-                return desc + `<div>${loc(`space_digsite_offense`,[rating])}</div>`;
-            },
-            support(){ return -1; },
-            powered(){ return powerCostMod(1); },
-            action(){
-                if (payCosts($(this)[0])){
-                    global.space.tank.count++;
-                    if (global.space.drone_control.support < global.space.drone_control.s_max){
-                        global.space.tank.on++;
+                    if (global.resource.Copper.display){
+                        let val = sizeApproximation(+(spatialReasoning(1520) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Copper.name])}</span>`;
                     }
-                    return true;
+                    if (global.resource.Iron.display){
+                        let val = sizeApproximation(+(spatialReasoning(1400) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Iron.name])}</span>`;
+                    }
+                    if (global.resource.Aluminium.display){
+                        let val = sizeApproximation(+(spatialReasoning(1280) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Aluminium.name])}</span>`;
+                    }
+                    if (global.resource.Cement.display){
+                        let val = sizeApproximation(+(spatialReasoning(1120) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Cement.name])}</span>`;
+                    }
+                    if (global.resource.Coal.display){
+                        let val = sizeApproximation(+(spatialReasoning(480) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Coal.name])}</span>`;
+                    }
+                    if (global.resource.Steel.display){
+                        let val = sizeApproximation(+(spatialReasoning(240) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Steel.name])}</span>`;
+                    }
+                    if (global.resource.Titanium.display){
+                        let val = sizeApproximation(+(spatialReasoning(160) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Titanium.name])}</span>`;
+                    }
+                    if (global.resource.Alloy.display){
+                        let val = sizeApproximation(+(spatialReasoning(180) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Alloy.name])}</span>`
+                    }
+                    if (global.resource.Polymer.display){
+                        let val = sizeApproximation(+(spatialReasoning(150) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Polymer.name])}</span>`
+                    }
+                    if (global.resource.Iridium.display){
+                        let val = sizeApproximation(+(spatialReasoning(175) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Iridium.name])}</span>`
+                    }
+                    if (global.resource.Nano_Tube.display){
+                        let val = sizeApproximation(+(spatialReasoning(120) * multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Nano_Tube.name])}</span>`
+                    }
+                    if (global.resource.Neutronium.display){
+                        let val = sizeApproximation(+(spatialReasoning(64) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Neutronium.name])}</span>`
+                    }
+                    if (global.resource.Adamantite.display){
+                        let val = sizeApproximation(+(spatialReasoning(72) * h_multiplier).toFixed(0),1);
+                        storage = storage + `<span>${loc('plus_max_resource',[val,global.resource.Adamantite.name])}</span>`
+                    }
+                    storage = storage + '</div>';
+                    return storage;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.storehouse.count++;
+                        let multiplier = storehouseMultiplier();
+                        global['resource']['Lumber'].max += (spatialReasoning(3000) * multiplier);
+                        global['resource']['Stone'].max += (spatialReasoning(3000) * multiplier);
+                        global['resource']['Furs'].max += (spatialReasoning(1700) * multiplier);
+                        global['resource']['Copper'].max += (spatialReasoning(1520) * multiplier);
+                        global['resource']['Iron'].max += (spatialReasoning(1400) * multiplier);
+                        global['resource']['Aluminium'].max += (spatialReasoning(1280) * multiplier);
+                        global['resource']['Cement'].max += (spatialReasoning(1120) * multiplier);
+                        global['resource']['Coal'].max += (spatialReasoning(480) * multiplier);
+                        global['resource']['Steel'].max += ((spatialReasoning(240) * multiplier));
+                        global['resource']['Titanium'].max += ((spatialReasoning(160) * multiplier));
+                        global['resource']['Alloy'].max += ((spatialReasoning(180) * multiplier));
+                        if (global.resource.Chrysotile.display){
+                            global['resource']['Chrysotile'].max += (spatialReasoning(3000) * multiplier);
+                        }
+                        if (global.resource.Nano_Tube.display){
+                            global['resource']['Nano_Tube'].max += ((spatialReasoning(120) * multiplier));
+                        }
+                        if (global.resource.Neutronium.display){
+                            global['resource']['Neutronium'].max += ((spatialReasoning(64) * multiplier));
+                        }
+                        if (global.resource.Adamantite.display){
+                            global['resource']['Adamantite'].max += ((spatialReasoning(72) * multiplier));
+                        }
+                        return true;
+                    }
+                    return false;
                 }
-                return false;
+            },
+            titan_bank: {
+                id: 'space-titan_bank',
+                title: loc('city_bank'),
+                desc(){
+                    return loc('city_bank_desc',[genusVars[races[global.race.species].type].solar.titan]);
+                },
+                reqs: { titan: 6 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('titan_bank', offset, 2500000, 1.32); },
+                    Titanium(offset){ return spaceCostMultiplier('titan_bank', offset, 380000, 1.32); },
+                    Neutronium(offset){ return spaceCostMultiplier('titan_bank', offset, 5000, 1.32); }
+                },
+                effect(){
+                    let vault = bank_vault() * 2;
+                    vault = spatialReasoning(vault);
+                    vault = (+(vault).toFixed(0)).toLocaleString();
+                    return loc('plus_max_resource',[`\$${vault}`,loc('resource_Money_name')]);
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global['resource']['Money'].max += spatialReasoning(1800);
+                        global.space.titan_bank.count++;
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            g_factory: {
+                id: 'space-g_factory',
+                title: loc('interstellar_g_factory_title'),
+                desc(){ return `<div>${loc('interstellar_g_factory_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.titan])}</div>`; },
+                reqs: { graphene: 1 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('g_factory', offset, 950000, 1.28); },
+                    Copper(offset){ return spaceCostMultiplier('g_factory', offset, 165000, 1.28); },
+                    Stone(offset){ return spaceCostMultiplier('g_factory', offset, 220000, 1.28); },
+                    Adamantite(offset){ return spaceCostMultiplier('g_factory', offset, 12500, 1.28); }
+                },
+                effect(){
+                    let graphene = 0.05;
+                    if (global.race['high_pop']){
+                        graphene = +(highPopAdjust(graphene)).toFixed(3);
+                    }
+                    return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div><div>${loc('space_red_mine_effect',[graphene,global.resource.Graphene.name])}</div><div>${loc('interstellar_g_factory_effect')}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(1); },
+                special: true,
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.g_factory.count++;
+                        global.resource.Graphene.display = true;
+                        if (global.space.electrolysis.support < global.space.electrolysis.s_max){
+                            global.space.g_factory.on++;
+                            if (global.race['kindling_kindred'] || global.race['smoldering']){
+                                global.space.g_factory.Oil++;
+                            }
+                            else {
+                                global.space.g_factory.Lumber++;
+                            }
+                        }
+                        global.settings.showIndustry = true;
+                        defineIndustry();
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            sam: {
+                id: 'space-sam',
+                title: loc('space_sam_title'),
+                desc(){
+                    return `<div>${loc('space_sam_desc')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { titan: 7 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('sam', offset, 2500000, 1.28); },
+                    Steel(offset){ return spaceCostMultiplier('sam', offset, 450000, 1.28); },
+                    Elerium(offset){ return spaceCostMultiplier('sam', offset, 120, 1.28); },
+                    Brick(offset){ return spaceCostMultiplier('sam', offset, 160000, 1.28); },
+                },
+                effect(){
+                    let desc = `<div>${loc('galaxy_defense_platform_effect',[25])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                powered(){ return powerCostMod(5); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.sam.count++;
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.space.sam.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    vBind({el: `#spc_titansynd`},'update');
+                }
+            },
+            decoder: {
+                id: 'space-decoder',
+                title: loc('space_decoder_title'),
+                desc(){
+                    return `<div>${loc('space_decoder_title')}</div><div class="has-text-special">${loc('requires_power_support_combo',[genusVars[races[global.race.species].type].solar.titan, global.resource.Cipher.name])}</div>`;
+                },
+                reqs: { titan: 8 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('decoder', offset, 12500000, 1.275); },
+                    Elerium(offset){ return spaceCostMultiplier('decoder', offset, 750, 1.275); },
+                    Orichalcum(offset){ return spaceCostMultiplier('decoder', offset, 330000, 1.275); },
+                    Quantium(offset){ return spaceCostMultiplier('decoder', offset, 180000, 1.275); },
+                },
+                effect(){
+                    let cipher = $(this)[0].support_fuel().a;
+                    let know = 2500;
+                    if (global.race['high_pop']){
+                        know = highPopAdjust(know);
+                    }
+                    if (p_on['ai_core2']){
+                        know *= 1.25;
+                    }
+                    let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.titan])}</div>`;
+                    desc += `<div>${loc('space_red_exotic_lab_effect1',[know])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('spend',[cipher,global.resource[$(this)[0].support_fuel().r].name])}</div>`;
+                },
+                powered(){ return powerCostMod(1); },
+                support_fuel(){ return { r: 'Cipher', a: 0.06 }; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.decoder.count++;
+                        if (global.space.electrolysis.support < global.space.electrolysis.s_max){
+                            global.space.decoder.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            ai_core: {
+                id: 'space-ai_core',
+                title: loc('space_ai_core'),
+                desc(wiki){
+                    if (!global.space.hasOwnProperty('ai_core') || global.space.ai_core.count < 100 || wiki){
+                        return `<div>${loc('space_ai_core')}</div><div class="has-text-special">${loc('requires_segmemts',[100])}</div>` + (global.space.hasOwnProperty('ai_core') && global.space.ai_core.count >= 100 ? `<div class="has-text-special">${loc('requires_power')}</div>` : ``);
+                    }
+                    else {
+                        return `<div>${loc('space_ai_core')}</div>`;
+                    }
+                },
+                reqs: { titan: 9 },
+                path: ['truepath'],
+                condition(){
+                    return global.space.ai_core.count >= 100 ? false : true;
+                },
+                queue_size: 10,
+                queue_complete(){ return 100 - global.space.ai_core.count; },
+                cost: {
+                    Money(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 2500000 : 0; },
+                    Cement(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 180000 : 0; },
+                    Aluminium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 250000 : 0; },
+                    Elerium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 250 : 0; },
+                    Nano_Tube(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 125000 : 0; },
+                    Orichalcum(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 50000 : 0; },
+                    Quantium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 100000 : 0; },
+                    Cipher(offset){ return ((offset || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0)) < 100 ? 750 : 0; },
+                },
+                effect(wiki){
+                    let effectText = `<div>${loc('space_ai_core_effect')}</div>`;
+                    let count = ((wiki || 0) + (global.space.hasOwnProperty('ai_core') ? global.space.ai_core.count : 0));
+                    if (count < 100){
+                        let remain = 100 - count;
+                        effectText += `<div class="has-text-special">${loc('space_dwarf_collider_effect2',[remain])}</div>`;
+                    }
+                    else {
+                        return outerTruth.spc_titan.ai_core2.effect();
+                    }
+                    return effectText;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        if (global.space.ai_core.count < 100){
+                            global.space.ai_core.count++;
+                            if (global.space.ai_core.count >= 100){
+                                global.tech['titan_ai_core'] = 1;
+                                global.space['ai_core2'] = { count: 1, on: 0 };
+                                if (global.city.power >= outerTruth.spc_titan.ai_core2.powered()){
+                                    global.space.ai_core2.on++;
+                                }
+                                renderSpace();
+                                drawTech();
+                            }
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            },
+            ai_core2: {
+                id: 'space-ai_core2',
+                title: loc('space_ai_core'),
+                desc(){
+                    return `<div>${loc('space_ai_core')}</div><div class="has-text-special">${loc('space_electrolysis_req',[global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                reqs: { titan_ai_core: 1 },
+                path: ['truepath'],
+                condition(){
+                    return global.space.hasOwnProperty('ai_core') && global.space.ai_core.count >= 100 ? true : false;
+                },
+                wiki: false,
+                queue_complete(){ return 0; },
+                cost: {},
+                powered(){
+                    return powerCostMod(100);
+                },
+                p_fuel(){ return { r: 'Water', a: 1000 }; },
+                effect(){
+                    let value = 25;
+                    let desc = `<div class="has-text-warning">${loc('interstellar_citadel_stat',[+(quantum_level).toFixed(1)])}</div>`;
+                    desc += `<div>${loc('interstellar_citadel_effect',[value])}</div><div>${loc('space_ai_core_effect2',[value])}</div>`;
+                    if (global.tech['titan_ai_core'] && global.tech.titan_ai_core >= 2){
+                        desc += `<div>${loc('space_ai_core_effect3',[50])}</div>`;
+                    }
+                    desc += `<div class="has-text-caution">${loc('space_electrolysis_use',[$(this)[0].p_fuel().a,global.resource[$(this)[0].p_fuel().r].name,$(this)[0].powered()])}</div>`;
+                    if (global.tech['titan_ai_core'] && global.tech.titan_ai_core >= 3){
+                        let drift = +calcAIDrift().toFixed(1);
+                        desc += `<div class="has-text-advanced">${loc('space_ai_core_effect4',[drift])}</div>`;
+                    }
+                    return desc;
+                },
+                action(){
+                    return false;
+                },
+                flair(){
+                    return global.space.hasOwnProperty('ai_core2') && global.space.ai_core2.on >= 1 ? loc(`space_ai_core_flair`) : loc(`space_ai_core_flair2`);
+                }
+            },
+            ai_colonist: {
+                id: 'space-ai_colonist',
+                title: loc('space_ai_colonist_title'),
+                desc(){
+                    return `<div>${loc('space_ai_colonist_title')}</div><div class="has-text-special">${loc('requires_power')}</div>`;
+                },
+                reqs: { titan_ai_core: 3 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('ai_colonist', offset, 112000000, 1.35); },
+                    Alloy(offset){ return spaceCostMultiplier('ai_colonist', offset, 750000, 1.35); },
+                    Elerium(offset){ return spaceCostMultiplier('ai_colonist', offset, 500, 1.35); },
+                    Nano_Tube(offset){ return spaceCostMultiplier('ai_colonist', offset, 525000, 1.35); },
+                    Quantium(offset){ return spaceCostMultiplier('ai_colonist', offset, 150000, 1.35); },
+                    Cipher(offset){ return spaceCostMultiplier('ai_colonist', offset, 10000, 1.35); },
+                },
+                effect(){
+                    return `<div>${loc('plus_max_resource',[jobScale(1),global.race['truepath'] ? loc('job_colonist_tp',[genusVars[races[global.race.species].type].solar.titan]) : loc('colonist')])}</div><div>${loc('space_ai_colonist_effect',[jobScale(1),genusVars[races[global.race.species].type].solar.titan])}</div><div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                powered(){ return powerCostMod(10); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.ai_colonist.count++;
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.space.ai_colonist.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                flair: loc(`tech_combat_droids_flair`)
+            },
+        },
+        spc_enceladus: {
+            info: {
+                name(){
+                    return genusVars[races[global.race.species].type].solar.enceladus;
+                },
+                desc(){
+                    return loc('space_enceladus_info_desc',[genusVars[races[global.race.species].type].solar.enceladus, races[global.race.species].home]);
+                },
+                support: 'titan_spaceport',
+                zone: 'outer',
+                syndicate(){ return global.tech['titan'] && global.tech.titan >= 3 && global.tech['enceladus'] && global.tech.enceladus >= 2 ? true : false; },
+                syndicate_cap(){
+                    if (global.tech['triton']){
+                        return global.tech.outer >= 4 ? 1500 : 1000;
+                    }
+                    return 600;
+                }
+            },
+            enceladus_mission: {
+                id: 'space-enceladus_mission',
+                title(){
+                    return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.enceladus]);
+                },
+                desc(){
+                    return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.enceladus]);
+                },
+                reqs: { outer: 1 },
+                grant: ['enceladus',1],
+                path: ['truepath'],
+                queue_complete(){ return global.tech.enceladus >= 1 ? 0 : 1; },
+                cost: {
+                    Helium_3(offset,wiki){ return +fuel_adjust(250000,false,wiki).toFixed(0); },
+                    Elerium(){ return 100; }
+                },
+                effect(){
+                    return loc('space_titan_mission_effect',[genusVars[races[global.race.species].type].solar.enceladus]);
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('space_enceladus_mission_action',[genusVars[races[global.race.species].type].solar.enceladus]),'info',false,['progress']);
+                        global.resource.Water.display = true;
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            water_freighter: {
+                id: 'space-water_freighter',
+                title: loc('space_water_freighter_title'),
+                desc(){
+                    return `<div>${loc('space_water_freighter_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
+                },
+                reqs: { enceladus: 2 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('water_freighter', offset, 450000, 1.25); },
+                    Iron(offset){ return spaceCostMultiplier('water_freighter', offset, 362000, 1.25); },
+                    Nano_Tube(offset){ return spaceCostMultiplier('water_freighter', offset, 125000, 1.25); },
+                    Sheet_Metal(offset){ return spaceCostMultiplier('water_freighter', offset, 75000, 1.25); }
+                },
+                effect(wiki){
+                    let helium = +fuel_adjust(5,true,wiki).toFixed(2);
+                    let water = +(production('water_freighter')).toFixed(2);
+                    return `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div><div>${loc('produce',[water,global.resource.Water.name])}</div><div class="has-text-caution">${loc(`space_belt_station_effect3`,[helium])}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(1); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.water_freighter.count++;
+                        if (global.space.titan_spaceport.support < global.space.titan_spaceport.s_max){
+                            global.space.water_freighter.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            zero_g_lab: {
+                id: 'space-zero_g_lab',
+                title: loc('tech_zero_g_lab'),
+                desc(){
+                    return `<div>${loc('tech_zero_g_lab')}</div><div class="has-text-special">${loc('requires_power_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
+                },
+                reqs: { enceladus: 3 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('zero_g_lab', offset, 5000000, 1.25); },
+                    Alloy(offset){ return spaceCostMultiplier('zero_g_lab', offset, 125000, 1.25); },
+                    Graphene(offset){ return spaceCostMultiplier('zero_g_lab', offset, 225000, 1.25); },
+                    Stanene(offset){ return spaceCostMultiplier('zero_g_lab', offset, 600000, 1.25); }
+                },
+                effect(){
+                    let synd = syndicate('spc_enceladus');
+                    let know = Math.round(10000 * synd);
+
+                    let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div><div>${loc('city_max_knowledge',[know])}</div>`;
+                    if (global.resource.Quantium.display){
+                        desc = desc + `<div>${loc('space_zero_g_lab_effect',[jobScale(1)])}</div>`;
+                    }
+                    if (global.resource.Cipher.display){
+                        desc = desc + `<div>${loc('plus_max_resource',[10000,global.resource.Cipher.name])}</div>`;
+                    }
+                    return desc + `<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(12); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.zero_g_lab.count++;
+                        if (global.space.titan_spaceport.support < global.space.titan_spaceport.s_max){
+                            global.space.zero_g_lab.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            operating_base: {
+                id: 'space-operating_base',
+                title: loc('tech_operating_base'),
+                desc(){
+                    return `<div>${loc('tech_operating_base')}</div><div class="has-text-special">${loc('requires_power_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
+                },
+                reqs: { enceladus: 4 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('operating_base', offset, 7500000, 1.3); },
+                    Furs(offset){ return spaceCostMultiplier('operating_base', offset, 500000, 1.3); },
+                    Adamantite(offset){ return spaceCostMultiplier('operating_base', offset, 375000, 1.3); },
+                    Stanene(offset){ return spaceCostMultiplier('operating_base', offset, 750000, 1.3); },
+                    Mythril(offset){ return spaceCostMultiplier('operating_base', offset, 225000, 1.3); },
+                    Horseshoe(){ return global.race['hooved'] ? 4 : 0; }
+                },
+                effect(){
+                    let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.enceladus])}</div>`;
+                    desc += `<div>${loc('galaxy_defense_platform_effect',[50])}</div>`;
+                    desc += loc('plus_max_resource',[jobScale(4),loc('civics_garrison_soldiers')]);
+                    return desc + `<div class="has-text-caution">${loc('minus_power',[$(this)[0].powered()])}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(10); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.operating_base.count++;
+                        if (global.space.titan_spaceport.support < global.space.titan_spaceport.s_max){
+                            global.space.operating_base.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    vBind({el: `#spc_enceladussynd`},'update');
+                }
+            },
+            munitions_depot: {
+                id: 'space-munitions_depot',
+                title: loc('tech_munitions_depot'),
+                desc: loc('tech_munitions_depot'),
+                category: 'storage',
+                era: 'solar',
+                reqs: { enceladus: 5 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('munitions_depot', offset, 5000000, 1.22); },
+                    Iron(offset){ return spaceCostMultiplier('munitions_depot', offset, 185000, 1.22); },
+                    Sheet_Metal(offset){ return spaceCostMultiplier('munitions_depot', offset, 100000, 1.22); },
+                },
+                effect(){
+                    let containers = 25;
+                    return `<div>${loc('plus_max_crates',[containers])}</div><div>${loc('plus_max_containers',[containers])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.munitions_depot.count++;
+                        global.resource.Crates.max += 25;
+                        global.resource.Containers.max += 25;
+                        return true;
+                    }
+                    return false;
+                }
             }
         },
-        digsite: {
-            id: 'space-digsite',
-            title: loc('space_digsite_title'),
-            desc(){
-                return `<div>${loc('space_digsite_title')}</div>`;
+        spc_triton: {
+            info: {
+                name(){
+                    return genusVars[races[global.race.species].type].solar.triton;
+                },
+                desc(){
+                    return loc('space_triton_info_desc',[genusVars[races[global.race.species].type].solar.triton, races[global.race.species].home]);
+                },
+                zone: 'outer',
+                syndicate(){ return global.tech['triton'] && global.tech.triton >= 2 ? true : false; },
+                syndicate_cap(){ return global.tech['outer'] && global.tech.outer >= 4 ? 5000 : 3000; },
+                extra(region){
+                    if (global.tech['triton'] && global.tech.triton >= 3){
+                        $(`#${region}`).append(`<div id="${region}resist" v-show="${region}" class="syndThreat has-text-caution">${loc('space_ground_resist')} <span class="has-text-danger" v-html="threat(enemy,troops)"></span></div>`);
+                        vBind({
+                            el: `#${region}resist`,
+                            data: global.space.fob,
+                            methods: {
+                                threat(e,t){
+                                    let wounded = global.civic.garrison.wounded - garrisonSize();
+                                    if (wounded < 0){ wounded = 0; }
+                                    let d = +(e - armyRating(t,'army',wounded)).toFixed(0);
+                                    return d < 0 ? 0 : d;
+                                }
+                            }
+                        });
+                    }
+                }
             },
-            reqs: { eris: 3 },
-            path: ['truepath'],
-            queue_complete(){ return 0; },
-            cost: {},
-            effect(){
-                let control = global.space['digsite'] ? global.space.digsite.count : 0;
-                return `<div>${loc(`space_crashed_ship_effect`,[control])}</div>`;
+            triton_mission: {
+                id: 'space-triton_mission',
+                title(){
+                    return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.triton]);
+                },
+                desc(){
+                    return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.triton]);
+                },
+                reqs: { outer: 2 },
+                grant: ['triton',1],
+                path: ['truepath'],
+                queue_complete(){ return global.tech.triton >= 1 ? 0 : 1; },
+                cost: {
+                    Helium_3(offset,wiki){ return +fuel_adjust(600000,false,wiki).toFixed(0); },
+                    Elerium(){ return 2500; }
+                },
+                effect(){
+                    return loc('space_triton_mission_effect',[genusVars[races[global.race.species].type].solar.triton]);
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        messageQueue(loc('space_triton_mission_action',[genusVars[races[global.race.species].type].solar.triton]),'info',false,['progress']);
+                        global.space.syndicate['spc_triton'] = 1250;
+                        global.space.syndicate['spc_titan'] += 250;
+                        global.space.syndicate['spc_enceladus'] += 250;
+                        return true;
+                    }
+                    return false;
+                }
             },
-            action(){
-                return false;
-            }
+            fob: {
+                id: 'space-fob',
+                title: loc('space_fob_title'),
+                desc(){
+                    return `<div>${loc('tech_fob')}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Helium_3.name])}</div>`;
+                },
+                reqs: { triton: 2 },
+                path: ['truepath'],
+                queue_complete(){ return 1 - global.space.fob.count; },
+                cost: {
+                    Money(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1  ? 0 : spaceCostMultiplier('fob', offset, 250000000, 1.1); },
+                    Copper(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 8000000, 1.1); },
+                    Uranium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 50000, 1.1); },
+                    Nano_Tube(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 2500000, 1.1); },
+                    Graphene(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 3000000, 1.1); },
+                    Sheet_Metal(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 7500000, 1.1); },
+                    Quantium(offset){ return ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) >= 1 ? 0 : spaceCostMultiplier('fob', offset, 500000, 1.1); },
+                    Horseshoe(offset){ return global.race['hooved'] && ((offset || 0) + (global.space.hasOwnProperty('fob') ? global.space.fob.count : 0)) < 1 ? 10 : 0; }
+                },
+                effect(wiki){
+                    let troops = garrisonSize();
+                    let max_troops = garrisonSize(true);
+                    let desc = `<div>${loc('galaxy_defense_platform_effect',[500])}</div>`;
+                    desc += loc('plus_max_resource',[jobScale(10),loc('civics_garrison_soldiers')]);
+                    desc += `<div class="has-text-warning"><span class="soldier">${loc('civics_garrison_soldiers')}:</span> <span>${troops}</span> / <span>${max_troops}<span></div>`;
+                    desc += `<div class="has-text-warning"><span class="wounded">${loc('civics_garrison_wounded')}:</span> <span>${global.civic['garrison'] ? global.civic.garrison.wounded : 0}</span></div>`;
+                    desc += `<div class="has-text-warning">${loc('space_fob_landed',[global.space['fob'] ? global.space.fob.troops : 0])}</div>`;
+                    let helium = +(fuel_adjust(125,true,wiki)).toFixed(2);
+                    return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),helium,global.resource.Helium_3.name])}</div>`;
+                },
+                powered(){ return powerCostMod(50); },
+                action(){
+                    if (global.space.fob.count < 1 && payCosts($(this)[0])){
+                        global.space.fob.count++;
+                        if (global.city.power >= $(this)[0].powered()){
+                            global.space.fob.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                },
+                post(){
+                    if (global.tech['triton'] === 2){
+                        global.tech['triton'] = 3;
+                        drawTech();
+                        renderSpace();
+                        messageQueue(loc('space_fob_msg'),'info',false,['progress']);
+                    }
+                }
+            },
+            lander: {
+                id: 'space-lander',
+                title: loc('space_lander_title'),
+                desc(){
+                    return `<div>${loc('space_lander_title')}</div><div class="has-text-special">${loc('requires_soldiers')}</div><div class="has-text-special">${loc('space_red_space_barracks_desc_req')}</div>`;
+                },
+                reqs: { triton: 3 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('lander', offset, 2400000, 1.15); },
+                    Aluminium(offset){ return spaceCostMultiplier('lander', offset, 185000, 1.15); },
+                    Neutronium(offset){ return spaceCostMultiplier('lander', offset, 10000, 1.15); },
+                    Nano_Tube(offset){ return spaceCostMultiplier('lander', offset, 158000, 1.15); },
+                },
+                powered(){ return powerCostMod(1); },
+                effect(wiki){
+                    let oil = +fuel_adjust(50,true,wiki).toFixed(2);
+                    let data = ``;
+                    if (global.space['crashed_ship'] && global.space.crashed_ship.count === 100){
+                        data = `<div>${loc(`space_lander_effect3`,[production('lander'),global.resource.Cipher.name])}</div>`;
+                    }
+                    return `<div>${loc('space_lander_effect',[genusVars[races[global.race.species].type].solar.triton])}</div>${data}<div class="has-text-warning">${loc(`space_lander_effect2`,[jobScale(3)])}</div><div class="has-text-caution">${loc('space_red_space_barracks_effect2',[oil])}</div>`;
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.lander.count++;
+                        global.space.lander.on++;
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            crashed_ship: {
+                id: 'space-crashed_ship',
+                title: loc('space_crashed_ship_title'),
+                desc(){
+                    return `<div>${loc('space_crashed_ship_title')}</div>`;
+                },
+                reqs: { triton: 3 },
+                path: ['truepath'],
+                queue_complete(){ return 0; },
+                cost: {},
+                effect(){
+                    let control = global.space['crashed_ship'] ? global.space.crashed_ship.count : 0;
+                    return `<div>${loc(`space_crashed_ship_effect`,[control])}</div>`;
+                },
+                action(){
+                    return false;
+                }
+            },
         },
-    }
-};
+        spc_kuiper: {
+            info: {
+                name(){
+                    return loc(`space_kuiper_title`);
+                },
+                desc(){
+                    return loc('space_kuiper_desc');
+                },
+                zone: 'outer',
+                syndicate(){ return global.tech['kuiper'] ? true : false; },
+                syndicate_cap(){ return 2500; },
+            },
+            kuiper_mission: {
+                id: 'space-kuiper_mission',
+                title(){
+                    return loc('space_mission_title',[loc(`space_kuiper_title`)]);
+                },
+                desc(){
+                    return loc('space_mission_desc',[loc(`space_kuiper_title`)]);
+                },
+                reqs: { outer: 7 },
+                grant: ['kuiper',1],
+                path: ['truepath'],
+                queue_complete(){ return global.tech.kuiper >= 1 ? 0 : 1; },
+                cost: {
+                    Helium_3(offset,wiki){ return +fuel_adjust(1000000,false,wiki).toFixed(0); },
+                    Elerium(){ return 1000; }
+                },
+                effect(){
+                    return loc('space_kuiper_mission_effect');
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space['orichalcum_mine'] = { count: 0, on: 0 };
+                        global.space['uranium_mine'] = { count: 0, on: 0 };
+                        global.space['neutronium_mine'] = { count: 0, on: 0 };
+                        global.space.syndicate['spc_kuiper'] = 500;
+                        messageQueue(loc('space_kuiper_mission_action'),'info',false,['progress']);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            orichalcum_mine: {
+                id: 'space-orichalcum_mine',
+                title(){ return loc('space_kuiper_mine',[global.resource.Orichalcum.name]); },
+                desc(){
+                    return `<div>${loc('space_kuiper_mine',[global.resource.Orichalcum.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
+                },
+                reqs: { kuiper: 1 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 25000000, 1.25); },
+                    Graphene(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 900000, 1.25); },
+                    Elerium(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 200, 1.25); },
+                    Mythril(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 450000, 1.25); },
+                    Quantium(offset){ return spaceCostMultiplier('orichalcum_mine', offset, 150000, 1.25); },
+                },
+                effect(wiki){
+                    let mineral = +(production('orichalcum_mine')).toFixed(3);
+                    let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
+                    let desc = `<div>${loc('gain',[mineral,loc('resource_Orichalcum_name')])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                powered(){ return powerCostMod(10); },
+                p_fuel(){ return { r: 'Oil', a: 200 }; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.orichalcum_mine.count++;
+                        global.resource.Orichalcum.display = true;
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.space.orichalcum_mine.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            uranium_mine: {
+                id: 'space-uranium_mine',
+                title(){ return loc('space_kuiper_mine',[global.resource.Uranium.name]); },
+                desc(){
+                    return `<div>${loc('space_kuiper_mine',[global.resource.Uranium.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
+                },
+                reqs: { kuiper: 1 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('uranium_mine', offset, 5000000, 1.25); },
+                    Iridium(offset){ return spaceCostMultiplier('uranium_mine', offset, 250000, 1.25); },
+                    Steel(offset){ return spaceCostMultiplier('uranium_mine', offset, 620000, 1.25); }
+                },
+                effect(wiki){
+                    let mineral = +(production('uranium_mine')).toFixed(3);
+                    let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
+                    let desc = `<div>${loc('gain',[mineral,loc('resource_Uranium_name')])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                powered(){ return powerCostMod(5); },
+                p_fuel(){ return { r: 'Oil', a: 60 }; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.uranium_mine.count++;
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.space.uranium_mine.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            neutronium_mine: {
+                id: 'space-neutronium_mine',
+                title(){ return loc('space_kuiper_mine',[global.resource.Neutronium.name]); },
+                desc(){
+                    return `<div>${loc('space_kuiper_mine',[global.resource.Neutronium.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
+                },
+                reqs: { kuiper: 1 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('neutronium_mine', offset, 8000000, 1.25); },
+                    Adamantite(offset){ return spaceCostMultiplier('neutronium_mine', offset, 650000, 1.25); },
+                    Stanene(offset){ return spaceCostMultiplier('neutronium_mine', offset, 1250000, 1.25); },
+                },
+                effect(wiki){
+                    let mineral = +(production('neutronium_mine')).toFixed(3);
+                    let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
+                    let desc = `<div>${loc('gain',[mineral,loc('resource_Neutronium_name')])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                powered(){ return powerCostMod(8); },
+                p_fuel(){ return { r: 'Oil', a: 60 }; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.neutronium_mine.count++;
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.space.neutronium_mine.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            elerium_mine: {
+                id: 'space-elerium_mine',
+                title(){ return loc('space_kuiper_mine',[global.resource.Elerium.name]); },
+                desc(){
+                    return `<div>${loc('space_kuiper_mine',[global.resource.Elerium.name])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource.Oil.name])}</div>`;
+                },
+                reqs: { kuiper: 2 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('elerium_mine', offset, 20000000, 1.25); },
+                    Titanium(offset){ return spaceCostMultiplier('elerium_mine', offset, 250000, 1.25); },
+                    Neutronium(offset){ return spaceCostMultiplier('elerium_mine', offset, 120000, 1.25); },
+                    Orichalcum(offset){ return spaceCostMultiplier('elerium_mine', offset, 175000, 1.25); },
+                },
+                effect(wiki){
+                    let mineral = +(production('elerium_mine')).toFixed(3);
+                    let fuel = +fuel_adjust($(this)[0].p_fuel().a,true,wiki).toFixed(1);
+                    let desc = `<div>${loc('gain',[mineral,loc('resource_Elerium_name')])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                powered(){ return powerCostMod(12); },
+                p_fuel(){ return { r: 'Oil', a: 125 }; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.elerium_mine.count++;
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.space.elerium_mine.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+        },
+        spc_eris: {
+            info: {
+                name(){
+                    return genusVars[races[global.race.species].type].solar.eris;
+                },
+                desc(){
+                    return loc('space_eris_info_desc',[genusVars[races[global.race.species].type].solar.eris]);
+                },
+                support: 'drone_control',
+                zone: 'outer',
+                syndicate(){ return global.tech['eris'] ? true : false; },
+                syndicate_cap(){ return 7500; },
+                extra(region){
+                    if (global.tech['eris'] && global.tech['eris'] === 1){
+                        $(`#${region}`).append(`<div id="${region}scanned" v-show="${region}" class="syndThreat has-text-caution">${loc('space_scanned')} <span class="has-text-info">{{ eris_scan }}%</span></div>`);
+                        vBind({
+                            el: `#${region}scanned`,
+                            data: global.tech
+                        });
+                    }
+                }
+            },
+            eris_mission: {
+                id: 'space-eris_mission',
+                title(){
+                    return loc('space_mission_title',[genusVars[races[global.race.species].type].solar.eris]);
+                },
+                desc(){
+                    return loc('space_mission_desc',[genusVars[races[global.race.species].type].solar.eris]);
+                },
+                reqs: { outer: 7 },
+                grant: ['eris',1],
+                path: ['truepath'],
+                queue_complete(){ return global.tech.eris >= 1 ? 0 : 1; },
+                cost: {
+                    Helium_3(offset,wiki){ return +fuel_adjust(1250000,false,wiki).toFixed(0); },
+                    Elerium(){ return 1250; }
+                },
+                effect(){
+                    return loc('space_eris_mission_effect',[genusVars[races[global.race.species].type].solar.eris]);
+                },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.syndicate['spc_eris'] = 4000;
+                        messageQueue(loc('space_eris_mission_action',[genusVars[races[global.race.species].type].solar.eris]),'info',false,['progress']);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            drone_control: {
+                id: 'space-drone_control',
+                title(){ return loc('space_drone_control',[genusVars[races[global.race.species].type].solar.titan]); },
+                desc(){
+                    return `<div>${loc('space_drone_control',[genusVars[races[global.race.species].type].solar.titan])}</div><div class="has-text-special">${loc('requires_power_combo',[global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                reqs: { eris: 3 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('drone_control', offset, 75000000, 1.3); },
+                    Neutronium(offset){ return spaceCostMultiplier('drone_control', offset, 100000, 1.3); },
+                    Stanene(offset){ return spaceCostMultiplier('drone_control', offset, 450000, 1.3); },
+                    Quantium(offset){ return spaceCostMultiplier('drone_control', offset, 300000, 1.3); },
+                },
+                effect(){
+                    let fuel = $(this)[0].p_fuel().a;
+                    let desc = `<div>+${loc(`galaxy_alien2_support`,[$(this)[0].support(),genusVars[races[global.race.species].type].solar.eris])}</div>`;
+                    return desc + `<div class="has-text-caution">${loc('requires_power_combo_effect',[$(this)[0].powered(),fuel,global.resource[$(this)[0].p_fuel().r].name])}</div>`;
+                },
+                support(){ return 5; },
+                powered(){ return powerCostMod(25); },
+                p_fuel(){ return { r: 'Uranium', a: 5 }; },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.drone_control.count++;
+                        if (global.city.powered && global.city.power >= $(this)[0].powered()){
+                            global.space.drone_control.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            shock_trooper: {
+                id: 'space-shock_trooper',
+                title: loc('space_shock_trooper_title'),
+                desc(){
+                    return `<div>${loc('space_shock_trooper_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
+                },
+                reqs: { eris: 3 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('shock_trooper', offset, 4250000, 1.225); },
+                    Polymer(offset){ return spaceCostMultiplier('shock_trooper', offset, 375000, 1.225); },
+                    Adamantite(offset){ return spaceCostMultiplier('shock_trooper', offset, 500000, 1.225); },
+                    Graphene(offset){ return spaceCostMultiplier('shock_trooper', offset, 220000, 1.225); },
+                    Elerium(offset){ return spaceCostMultiplier('shock_trooper', offset, 350, 1.225); },
+                },
+                effect(){
+                    let rating = Math.round(armyRating(1,'army',0) * syndicate('spc_eris'));
+                    let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
+                    if (global.space['digsite'] && global.space.digsite.count === 100){
+                        desc = `<div>${loc(`space_lander_effect3`,[production('shock_trooper'),global.resource.Cipher.name])}</div>`;
+                    }
+                    return desc + `<div>${loc(`space_digsite_offense`,[rating])}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(1); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.shock_trooper.count++;
+                        if (global.space.drone_control.support < global.space.drone_control.s_max){
+                            global.space.shock_trooper.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            tank: {
+                id: 'space-tank',
+                title: loc('space_tank_title'),
+                desc(){
+                    return `<div>${loc('space_tank_title')}</div><div class="has-text-special">${loc('space_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
+                },
+                reqs: { eris: 4 },
+                path: ['truepath'],
+                cost: {
+                    Money(offset){ return spaceCostMultiplier('tank', offset, 100000000, 1.25); },
+                    Alloy(offset){ return spaceCostMultiplier('tank', offset, 1250000, 1.25); },
+                    Orichalcum(offset){ return spaceCostMultiplier('tank', offset, 600000, 1.25); },
+                    Mythril(offset){ return spaceCostMultiplier('tank', offset, 500000, 1.25); },
+                    Uranium(offset){ return spaceCostMultiplier('tank', offset, 25000, 1.25); },
+                },
+                effect(){
+                    let rating = Math.round(100 * syndicate('spc_eris'));
+                    let desc = `<div class="has-text-caution">${loc('space_used_support',[genusVars[races[global.race.species].type].solar.eris])}</div>`;
+                    if (global.space['digsite'] && global.space.digsite.count === 100){
+                        desc = `<div>${loc(`space_lander_effect3`,[production('tank'),global.resource.Cipher.name])}</div>`;
+                    }
+                    return desc + `<div>${loc(`space_digsite_offense`,[rating])}</div>`;
+                },
+                support(){ return -1; },
+                powered(){ return powerCostMod(1); },
+                action(){
+                    if (payCosts($(this)[0])){
+                        global.space.tank.count++;
+                        if (global.space.drone_control.support < global.space.drone_control.s_max){
+                            global.space.tank.on++;
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            digsite: {
+                id: 'space-digsite',
+                title: loc('space_digsite_title'),
+                desc(){
+                    return `<div>${loc('space_digsite_title')}</div>`;
+                },
+                reqs: { eris: 3 },
+                path: ['truepath'],
+                queue_complete(){ return 0; },
+                cost: {},
+                effect(){
+                    let control = global.space['digsite'] ? global.space.digsite.count : 0;
+                    return `<div>${loc(`space_crashed_ship_effect`,[control])}</div>`;
+                },
+                action(){
+                    return false;
+                }
+            },
+        }
+    };
+}
 
 export function drawShipYard(){
     if (!global.settings.tabLoad && (global.settings.civTabs !== 2 || global.settings.govTabs !== 5)){
@@ -2015,7 +2018,7 @@ function drawShips(){
         global.space.shipyard.ships = global.space.shipyard.ships.sort((a, b) => (rerank[a.location] ? rerank[a.location] : a.location).localeCompare((rerank[b.location] ? rerank[b.location] : b.location)));
     }
 
-    const spaceRegions = spaceTech();
+    const spaceRegions = spaceProjects;
     for (let i=0; i<global.space.shipyard.ships.length; i++){
         let ship = global.space.shipyard.ships[i];
         if (!ship['xy']){ ship['xy'] = genXYcoord(ship.location); }

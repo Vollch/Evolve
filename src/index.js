@@ -1,18 +1,19 @@
-import { global, tmp_vars, save, message_logs, message_filters, webWorker } from './vars.js';
+import { global, tmp_vars, save, message_logs, message_filters, webWorker, power_generated, resizeGame } from './vars.js';
 import { loc, locales } from './locale.js';
-import { setupStats, alevel } from './achieve.js';
-import { vBind, initMessageQueue, clearElement, flib, tagEvent, gameLoop, popover, clearPopper, powerGrid, easterEgg, trickOrTreat, drawIcon } from './functions.js';
-import { tradeRatio, atomic_mass, supplyValue, marketItem, containerItem, loadEjector, loadSupply, loadAlchemy, initResourceTabs, tradeSummery } from './resources.js';
-import { defineJobs, } from './jobs.js';
-import { clearSpyopDrag } from './governor.js';
+import { setupStats, alevel, challengeIcon } from './achieve.js';
+import { vBind, initMessageQueue, clearElement, flib, tagEvent, gameLoop, popover, clearPopper, powerGrid, easterEgg, trickOrTreat, drawIcon, messageQueue, buildQueue, calc_mastery } from './functions.js';
+import { tradeRatio, atomic_mass, supplyValue, marketItem, containerItem, loadEjector, loadSupply, loadAlchemy, initResourceTabs, tradeSummery, defineResources } from './resources.js';
+import { defineJobs } from './jobs.js';
+import { clearSpyopDrag, govActive } from './governor.js';
 import { setPowerGrid, gridDefs, clearGrids } from './industry.js';
 import { defineGovernment, defineIndustry, defineGarrison, buildGarrison, commisionGarrison, foreignGov } from './civics.js';
-import { races, shapeShift } from './races.js';
-import { drawCity, drawTech, resQueue, clearResDrag } from './actions.js';
-import { renderSpace, ascendLab, terraformLab } from './space.js';
+import { races, shapeShift, biomes, planetTraits } from './races.js';
+import { drawCity, drawTech, resQueue, clearResDrag, planetGeology } from './actions.js';
+import { renderSpace, ascendLab, terraformLab, universe_types } from './space.js';
 import { renderFortress, buildFortress, drawMechLab, clearMechDrag, drawHellObservations } from './portal.js';
 import { drawShipYard, clearShipDrag } from './truepath.js';
 import { arpa, clearGeneticsDrag } from './arpa.js';
+import { initGameData } from './main.js';
 
 export function mainVue(){
     vBind({
@@ -67,12 +68,9 @@ export function mainVue(){
                         global.settings.sPackMsg = loc(`string_pack_using`,[fileName]);
                         save.setItem('string_pack_name',fileName); save.setItem('string_pack',LZString.compressToUTF16(evt.target.result));
                         if (global.settings.sPackOn){
-                            global.queue.rename = true;
-                            save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-                            if (webWorker.w){
-                                webWorker.w.terminate();
-                            }
-                            window.location.reload();
+                            initGameData();
+                            index();
+                            mainVue();
                         }
                        
                     }
@@ -87,23 +85,17 @@ export function mainVue(){
                     save.removeItem('string_pack_name');
                     save.removeItem('string_pack');
                     if (global.settings.sPackOn){
-                        global.queue.rename = true;
-                        save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-                        if (webWorker.w){
-                            webWorker.w.terminate();
-                        }
-                        window.location.reload();
+                        initGameData();
+                        index();
+                        mainVue();
                     }
                 }
             },
             stringPackOn(){
                 if (save.getItem('string_pack')){
-                    global.queue.rename = true;
-                    save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-                    if (webWorker.w){
-                        webWorker.w.terminate();
-                    }
-                    window.location.reload();
+                    initGameData();
+                    index();
+                    mainVue();
                 }
             },
             restoreGame(){
@@ -121,13 +113,12 @@ export function mainVue(){
                 });
             },
             lChange(locale){
-                global.settings.locale = locale;
-                global.queue.rename = true;
-                save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-                if (webWorker.w){
-                    webWorker.w.terminate();
+                if (global.settings.locale !== locale){
+                    global.settings.locale = locale;
+                    initGameData();
+                    index();
+                    mainVue();
                 }
-                window.location.reload();
             },
             setTheme(theme){
                 global.settings.theme = theme;
@@ -140,11 +131,8 @@ export function mainVue(){
             },
             icon(icon){
                 global.settings.icon = icon;
-                save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(global)));
-                if (webWorker.w){
-                    webWorker.w.terminate();
-                }
-                window.location.reload();
+                index();
+                mainVue();
             },
             remove(index){
                 global.r_queue.queue.splice(index,1);
@@ -220,6 +208,362 @@ export function mainVue(){
             return loc(`string_example`,[example]);
         }
     );
+
+    vBind({
+        el: '#race',
+        data: {
+            race: global.race,
+            city: global.city
+        },
+        methods: {
+            name(){
+                return flib('name');
+            }
+        },
+        filters: {
+            approx(kw){
+                return +(kw).toFixed(2);
+            },
+            mRound(m){
+                return +(m).toFixed(1);
+            }
+        }
+    });
+
+    popover('race',
+        function(){
+            return typeof races[global.race.species].desc === 'string' ? races[global.race.species].desc : races[global.race.species].desc();
+        },{
+            elm: '#race > .name'
+        }
+    );
+
+    popover('morale',
+        function(obj){
+            if (global.city.morale.unemployed !== 0){
+                let type = global.city.morale.unemployed > 0 ? 'success' : 'danger';
+                obj.popper.append(`<p class="modal_bd"><span>${loc(global.race['playful'] ? 'morale_hunter' : 'morale_unemployed')}</span> <span class="has-text-${type}"> ${+(global.city.morale.unemployed).toFixed(1)}%</span></p>`);
+            }
+            if (global.city.morale.stress !== 0){
+                let type = global.city.morale.stress > 0 ? 'success' : 'danger';
+                obj.popper.append(`<p class="modal_bd"><span>${loc('morale_stress')}</span> <span class="has-text-${type}"> ${+(global.city.morale.stress).toFixed(1)}%</span></p>`);
+            }
+
+            let total = 100 + global.city.morale.unemployed + global.city.morale.stress;
+            Object.keys(global.city.morale).forEach(function (morale){
+                if (!['current','unemployed','stress','season','cap','potential'].includes(morale) && global.city.morale[morale] !== 0){
+                    total += global.city.morale[morale];
+                    let type = global.city.morale[morale] > 0 ? 'success' : 'danger';
+
+                    let value = global.city.morale[morale];
+                    if (morale === 'entertain' && global.civic.govern.type === 'democracy'){
+                        let democracy = global.tech['high_tech'] && global.tech['high_tech'] >= 2 ? ( global.tech['high_tech'] >= 12 ? 1.3 : 1.25 ) : 1.2;
+                        value /= democracy;
+                    }
+
+                    obj.popper.append(`<p class="modal_bd"><span>${loc(`morale_${morale}`)}</span> <span class="has-text-${type}"> ${+(value).toFixed(1)}%</span></p>`)
+
+                    if (morale === 'entertain' && global.civic.govern.type === 'democracy'){
+                        let democracy = global.tech['high_tech'] && global.tech['high_tech'] >= 2 ? ( global.tech['high_tech'] >= 12 ? 30 : 25 ) : 20;
+                        obj.popper.append(`<p class="modal_bd"><span>ᄂ${loc('govern_democracy')}</span> <span class="has-text-success"> +${democracy}%</span></p>`);
+                    }
+                }
+            });
+
+            if (global.city.morale.season !== 0){
+                total += global.city.morale.season;
+                let season = global.city.calendar.season === 0 ? loc('morale_spring') : global.city.calendar.season === 1 ? loc('morale_summer') : loc('morale_winter');
+                let type = global.city.morale.season > 0 ? 'success' : 'danger';
+                obj.popper.append(`<p class="modal_bd"><span>${season}</span> <span class="has-text-${type}"> ${+(global.city.morale.season).toFixed(1)}%</span></p>`);
+            }
+
+            if (global.civic.govern.type === 'corpocracy'){
+                let penalty = global.tech['high_tech'] && global.tech['high_tech'] >= 12 ? 5 : 10;
+                total -= penalty;
+                obj.popper.append(`<p class="modal_bd"><span>${loc('govern_corpocracy')}</span> <span class="has-text-danger"> -${penalty}%</span></p>`);
+            }
+            if (global.civic.govern.type === 'republic'){
+                let repub = global.tech['high_tech'] && global.tech['high_tech'] >= 12 ? ( global.tech['high_tech'] >= 16 ? 40 : 30 ) : 20;
+                total += repub;
+                obj.popper.append(`<p class="modal_bd"><span>${loc('govern_republic')}</span> <span class="has-text-success"> +${repub}%</span></p>`);
+            }
+            if (global.civic.govern.type === 'federation'){
+                total += 10;
+                obj.popper.append(`<p class="modal_bd"><span>${loc('govern_federation')}</span> <span class="has-text-success"> +10%</span></p>`);
+            }
+
+            let milVal = govActive('militant',1);
+            if (milVal){
+                total -= milVal;
+                obj.popper.append(`<p class="modal_bd"><span>${loc('gov_trait_militant')}</span> <span class="has-text-danger"> -${milVal}%</span></p>`);
+            }
+
+            if (global.race['cheese']){
+                let raw_cheese = global.stats.hasOwnProperty('reset') ? global.stats.reset + 1 : 1;
+                let cheese = +(raw_cheese / (raw_cheese + 10) * 11).toFixed(2);
+                total += cheese;
+                obj.popper.append(`<p class="modal_bd"><span>${swissKnife(true,false)}</span> <span class="has-text-success"> +${cheese}%</span></p>`);
+            }
+
+            if (global.civic['homeless']){
+                let homeless = global.civic.homeless / 2;
+                total -= homeless;
+                obj.popper.append(`<p class="modal_bd"><span>${loc(`homeless`)}</span> <span class="has-text-danger"> -${homeless}%</span></p>`);
+            }
+
+            total = +(total).toFixed(1);
+
+            let container = $(`<div></div>`);
+            obj.popper.append(container);
+
+            container.append(`<div class="modal_bd sum"><span>${loc('morale_total')}</span> <span class="has-text-warning"> ${+(total).toFixed(1)}%</span></div>`);
+            container.append(`<div class="modal_bd"><span>${loc('morale_max')}</span> <span class="has-text-${total > global.city.morale.cap ? 'caution' : 'warning'}"> ${+(global.city.morale.cap).toFixed(1)}%</span></div>`);
+            container.append(`<div class="modal_bd"><span>${loc('morale_current')}</span> <span class="has-text-warning"> ${+(global.city.morale.current).toFixed(1)}%</span></div>`);
+
+            return undefined;
+        },
+        {
+            classes: `has-background-light has-text-dark`
+        }
+    );
+
+    popover('powerStatus',
+        function(obj){
+            let drain = +(global.city.power_total - global.city.power).toFixed(2);
+            Object.keys(power_generated).forEach(function (k){
+                if (power_generated[k]){
+                    let gen = +(power_generated[k]).toFixed(2);
+                    obj.popper.append(`<p class="modal_bd"><span>${k}</span> <span class="has-text-success">+${gen}</span></p>`);
+                }
+            });
+            obj.popper.append(`<p class="modal_bd"><span>${loc('power_consumed')}</span> <span class="has-text-danger"> -${drain}</span></p>`);
+            let avail = +(global.city.power).toFixed(2);
+            if (global.city.power > 0){
+                obj.popper.append(`<p class="modal_bd sum"><span>${loc('power_available')}</span> <span class="has-text-success">${avail}</span></p>`);
+            }
+            else {
+                obj.popper.append(`<p class="modal_bd sum"><span>${loc('power_available')}</span> <span class="has-text-danger">${avail}</span></p>`);
+            }
+        },
+        {
+            classes: `has-background-light has-text-dark`
+        }
+    );
+
+    vBind({
+        el: '#topBar',
+        data: {
+            city: global.city,
+            race: global.race,
+            s: global.settings
+        },
+        methods: {
+            weather(){
+                switch(global.city.calendar.weather){
+                    case 0:
+                        if (global.city.calendar.temp === 0){
+                            return global.city.calendar.wind === 1 ? loc('snowstorm') : loc('snow');
+                        }
+                        else {
+                            return global.city.calendar.wind === 1 ? loc('thunderstorm') : loc('rain');
+                        }
+                    case 1:
+                        return global.city.calendar.wind === 1 ? loc('cloudy_windy') : loc('cloudy');
+                    case 2:
+                        return global.city.calendar.wind === 1 ? loc('sunny_windy') : loc('sunny');
+                }
+            },
+            temp(){
+                switch(global.city.calendar.temp){
+                    case 0:
+                        return loc('cold');// weather, cold weather may reduce food output.';
+                    case 1:
+                        return loc('moderate');
+                    case 2:
+                        return loc('hot');// weather, hot weather may reduce worker productivity.';
+                }
+            },
+            moon(){
+                if (global.race['orbit_decayed']){
+                    return loc('moon0'); // New Moon
+                }
+                else if (global.city.calendar.moon === 0){
+                    return loc('moon1'); // New Moon
+                }
+                else if (global.city.calendar.moon > 0 && global.city.calendar.moon < 7){
+                    return loc('moon2'); // Waxing Crescent Moon
+                }
+                else if (global.city.calendar.moon === 7){
+                    return loc('moon3'); // First Quarter Moon
+                }
+                else if (global.city.calendar.moon > 7 && global.city.calendar.moon < 14){
+                    return loc('moon4'); // Waxing Gibbous Moon
+                }
+                else if (global.city.calendar.moon === 14){
+                    return loc('moon5'); // Full Moon
+                }
+                else if (global.city.calendar.moon > 14 && global.city.calendar.moon < 21){
+                    return loc('moon6'); // Waning Gibbous Moon
+                }
+                else if (global.city.calendar.moon === 21){
+                    return loc('moon7'); // Third Quarter Moon
+                }
+                else if (global.city.calendar.moon > 21){
+                    return loc('moon8'); // Waning Crescent Moon
+                }
+            },
+            showUniverse(){
+                return global.race.universe === 'standard' || global.race.universe === 'bigbang' ? false : true;
+            },
+            atRemain(){
+                return loc(`accelerated_time`);
+            },
+            pause(){
+                $(`#pausegame`).removeClass('play');
+                $(`#pausegame`).removeClass('pause');
+                if (global.settings.pause){
+                    global.settings.pause = false;
+                    $(`#pausegame`).addClass('play');
+                }
+                else {
+                    global.settings.pause = true;
+                    $(`#pausegame`).addClass('pause');
+                }
+                if (!global.settings.pause && !webWorker.s){
+                    gameLoop('start');
+                }
+            },
+            pausedesc(){
+                return global.settings.pause ? loc('game_play') : loc('game_pause');
+            }
+        },
+        filters: {
+            planet(species){
+                return races[species].home;
+            },
+            universe(universe){
+                return universe === 'standard' || universe === 'bigbang' ? '' : universe_types[universe].name;
+            },
+            remain(at){
+                let minutes = Math.ceil(at * 2.5 / 60);
+                if (minutes > 0){
+                    let hours = Math.floor(minutes / 60);
+                    minutes -= hours * 60;
+                    return `${hours}:${minutes.toString().padStart(2,'0')}`;
+                }
+                return;
+            }
+        }
+    });
+
+    popover('topBarPlanet',
+        function(obj){
+            if (global.race.species === 'protoplasm'){
+                obj.popper.append($(`<span>${loc('infant')}</span>`));
+            }
+            else {
+                let planet = races[global.race.species].home;
+                let race = flib('name');
+                let planet_label = biomes[global.city.biome].label;
+                let trait = global.city.ptrait;
+                if (trait.length > 0){
+                    let traits = '';
+                    trait.forEach(function(t){
+                        if (planetTraits.hasOwnProperty(t)){
+                            if (t === 'mellow' && global.race.species === 'entish'){
+                                traits += `${loc('planet_mellow_eg')} `;
+                            }
+                            else {
+                                traits += `${planetTraits[t].label} `;
+                            }
+                        }
+                    });
+                    planet_label = `${traits}${planet_label}`;
+                }
+                let orbit = global.city.calendar.orbit;
+
+                let geo_traits = planetGeology(global.city.geology);
+
+                let challenges = '';
+                if (global.race['junker']){
+                    challenges = challenges + `<div>${loc('evo_challenge_junker_desc')} ${loc('evo_challenge_junker_conditions')}</div>`;
+                }
+                if (global.race['joyless']){
+                    challenges = challenges + `<div>${loc('evo_challenge_joyless_desc')} ${loc('evo_challenge_joyless_conditions')}</div>`;
+                }
+                if (global.race['steelen']){
+                    challenges = challenges + `<div>${loc('evo_challenge_steelen_desc')} ${loc('evo_challenge_steelen_conditions')}</div>`;
+                }
+                if (global.race['decay']){
+                    challenges = challenges + `<div>${loc('evo_challenge_decay_desc')} ${loc('evo_challenge_decay_conditions')}</div>`;
+                }
+                if (global.race['emfield']){
+                    challenges = challenges + `<div>${loc('evo_challenge_emfield_desc')} ${loc('evo_challenge_emfield_conditions')}</div>`;
+                }
+                if (global.race['inflation']){
+                    challenges = challenges + `<div>${loc('evo_challenge_inflation_desc')} ${loc('evo_challenge_inflation_conditions')}</div>`;
+                }
+                if (global.race['banana']){
+                    challenges = challenges + `<div>${loc('evo_challenge_banana_desc')} ${loc('wiki_achieve_banana1')}. ${loc('wiki_achieve_banana2')}. ${loc('wiki_achieve_banana3')}. ${loc('wiki_achieve_banana4',[500])}. ${loc('wiki_achieve_banana5',[50])}.</div>`;
+                }
+                if (global.race['orbit_decay']){
+                    let impact = global.race['orbit_decayed'] ? '' : loc('evo_challenge_orbit_decay_impact',[global.race['orbit_decay'] - global.stats.days]);
+                    let state = global.race['orbit_decayed'] ? loc('evo_challenge_orbit_decay_impacted',[races[global.race.species].home]) : loc('evo_challenge_orbit_decay_desc');
+                    challenges = challenges + `<div>${state} ${loc('evo_challenge_orbit_decay_conditions')} ${impact}</div>`;
+                    if (calc_mastery() >= 100 && global.race.universe !== 'antimatter'){
+                        challenges = challenges + `<div class="has-text-caution">${loc('evo_challenge_cataclysm_warn')}</div>`;
+                    }
+                    else {
+                        challenges = challenges + `<div class="has-text-danger">${loc('evo_challenge_scenario_warn')}</div>`;
+                    }
+                }
+
+                if (global.race['cataclysm']){
+                    if (calc_mastery() >= 50 && global.race.universe !== 'antimatter'){
+                        challenges = challenges + `<div>${loc('evo_challenge_cataclysm_desc')}</div><div class="has-text-caution">${loc('evo_challenge_cataclysm_warn')}</div>`;
+                    }
+                    else {
+                        challenges = challenges + `<div>${loc('evo_challenge_cataclysm_desc')}</div><div class="has-text-danger">${loc('evo_challenge_scenario_warn')}</div>`;
+                    }
+                }
+                obj.popper.append($(`<div>${loc(global.race['cataclysm'] ? 'no_home' : 'home',[planet,race,planet_label,orbit])}</div>${geo_traits}${challenges}`));
+            }
+            return undefined;
+        },
+        {
+            elm: `#topBar .planetWrap .planet`,
+            classes: `has-background-light has-text-dark`
+        }
+    );
+
+    popover('topBarUniverse',
+        function(obj){
+            obj.popper.append($(`<div>${universe_types[global.race.universe].desc}</div>`));
+            obj.popper.append($(`<div>${universe_types[global.race.universe].effect}</div>`));
+            return undefined;
+        },
+        {
+            elm: `#topBar .planetWrap .universe`,
+            classes: `has-background-light has-text-dark`
+        }
+    );
+
+    if (global.race['orbit_decay'] && !global.race['orbit_decayed']){
+        popover(`infoTimer`, function(){
+            return global.race['orbit_decayed'] ? '' : loc('evo_challenge_orbit_decay_impact',[global.race['orbit_decay'] - global.stats.days]);
+        },
+        {
+            elm: `#infoTimer`,
+            classes: `has-background-light has-text-dark`
+        });
+    }
+
+    challengeIcon();
+    defineJobs(true);
+    defineResources();
+    initTabs();
+    buildQueue();
+    resizeGame();
 }
 
 function tabLabel(lbl){
@@ -852,7 +1196,8 @@ export function loadTab(tab){
 
 export function index(){
     clearElement($('body'));
-
+    $('html').removeClass();
+    $('html').addClass(global.settings.theme);
     $('html').addClass(global.settings.font);
 
     // Top Bar
@@ -1416,4 +1761,35 @@ export function index(){
             </span>
         </div>
     `);
+
+    let revision = global['revision'] || '';
+    if (global['beta']){
+        $('#topBar .version > a').html(`v${global.version} Beta ${global.beta}${revision}`);
+    }
+    else {
+        $('#topBar .version > a').html('v'+global.version+revision);
+    }
+
+    initMessageQueue();
+
+    if (global.lastMsg){
+        Object.keys(global.lastMsg).forEach(function (tag){
+            global.lastMsg[tag].reverse().forEach(function(msg){
+                messageQueue(msg.m, msg.c, true, [tag], true);
+            });
+            global.lastMsg[tag].reverse();
+        });
+    }
+
+    $(`#msgQueue`).height(global.settings.msgQueueHeight);
+    $(`#buildQueue`).height(global.settings.buildQueueHeight);
+
+    global.settings.sPackMsg = save.getItem('string_pack_name') ? loc(`string_pack_using`,[save.getItem('string_pack_name')]) : loc(`string_pack_none`);
+
+    if (global.settings.pause){
+        $(`#pausegame`).addClass('pause');
+    }
+    else {
+        $(`#pausegame`).addClass('play');
+    }
 }

@@ -5,7 +5,7 @@ import { actions, checkCityRequirements, checkPowerRequirements } from './action
 import { races, traits, genusVars } from './races.js';
 import { atomic_mass } from './resources.js';
 import { checkRequirements, checkSpaceRequirements } from './space.js';
-import { fortressTech } from './portal.js';
+import { fortressModules } from './portal.js';
 
 export function loadIndustry(industry,parent,bind){
     switch (industry){
@@ -1254,7 +1254,7 @@ export function gridEnabled(c_action,region,p0,p1){
             isOk = global.race['cataclysm'] || global.race['orbit_decayed'] ? false : checkCityRequirements(p1);
             break;
         case 'portal':
-            isOk = checkRequirements(fortressTech(),p0,p1);
+            isOk = checkRequirements(fortressModules,p0,p1);
             break;
         default:
             isOk = p0 === 'spc_moon' && global.race['orbit_decayed'] ? false : checkSpaceRequirements(region,p0,p1);

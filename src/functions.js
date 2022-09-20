@@ -1,6 +1,6 @@
 import { global, save, message_logs, message_filters, webWorker, keyMultiplier, intervals, resizeGame } from './vars.js';
 import { loc } from './locale.js';
-import { races, traits, genus_traits, traitSkin } from './races.js';
+import { races, traits, traitExtra, genus_traits, traitSkin } from './races.js';
 import { actions, actionDesc } from './actions.js';
 import { jobScale } from './jobs.js';
 import { universe_affixes } from './space.js';
@@ -8,6 +8,7 @@ import { arpaAdjustCosts, arpaProjectCosts } from './arpa.js';
 import { gridDefs } from './industry.js';
 import { govActive } from './governor.js';
 import { universeLevel, universeAffix, alevel } from './achieve.js';
+import { startGame } from './main.js';
 
 var popperRef = false;
 export function popover(id,content,opts){
@@ -193,9 +194,6 @@ window.exportGame = function exportGame(){
 window.importGame = function importGame(data,utf16){
     let saveState = JSON.parse(utf16 ? LZString.decompressFromUTF16(data) : LZString.decompressFromBase64(data));
     if (saveState && 'evolution' in saveState && 'settings' in saveState && 'stats' in saveState && 'plasmid' in saveState.stats){
-        if (webWorker.w){
-            webWorker.w.terminate();
-        }
         if (saveState.hasOwnProperty('tech') && utf16){
             if (saveState.tech.hasOwnProperty('whitehole') && saveState.tech.whitehole >= 4){
                 saveState.tech.whitehole = 3;
@@ -215,7 +213,7 @@ window.importGame = function importGame(data,utf16){
             }
         }
         save.setItem('evolved',LZString.compressToUTF16(JSON.stringify(saveState)));
-        window.location.reload();
+        startGame();
     }
 }
 
@@ -2265,19 +2263,19 @@ export function getEaster(){
         global.special.egg[year]['egg15'] = false;
     }
 
-	let f = Math.floor,
-		// Golden Number - 1
-		G = year % 19,
-		C = f(year / 100),
-		// related to Epact
-		H = (C - f(C / 4) - f((8 * C + 13)/25) + 19 * G + 15) % 30,
-		// number of days from 21 March to the Paschal full moon
-		I = H - f(H/28) * (1 - f(29/(H + 1)) * f((21-G)/11)),
-		// weekday for the Paschal full moon
-		J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7,
-		// number of days from 21 March to the Sunday on or before the Paschal full moon
-		L = I - J,
-		month = 3 + f((L + 40)/44),
+    let f = Math.floor,
+        // Golden Number - 1
+        G = year % 19,
+        C = f(year / 100),
+        // related to Epact
+        H = (C - f(C / 4) - f((8 * C + 13)/25) + 19 * G + 15) % 30,
+        // number of days from 21 March to the Paschal full moon
+        I = H - f(H/28) * (1 - f(29/(H + 1)) * f((21-G)/11)),
+        // weekday for the Paschal full moon
+        J = (year + f(year / 4) + I + 2 - C + f(C / 4)) % 7,
+        // number of days from 21 March to the Sunday on or before the Paschal full moon
+        L = I - J,
+        month = 3 + f((L + 40)/44),
         day = L + 28 - 31 * f(month / 4);
 
     let easter = {
@@ -2473,61 +2471,6 @@ export function hoovedRename(style){
     else {
         return style ? 'forge' : loc('resource_Horseshoe_name');
     }
-}
-
-const traitExtra = {
-    infiltrator: [
-        loc(`wiki_trait_effect_infiltrator_ex1`),
-        loc(`wiki_trait_effect_infiltrator_ex2`,[
-            [
-                `<span class="has-text-warning">${loc('tech_steel')}</span>`, `<span class="has-text-warning">${loc('tech_electricity')}</span>`, `<span class="has-text-warning">${loc('tech_electronics')}</span>`, `<span class="has-text-warning">${loc('tech_fission')}</span>`,
-                `<span class="has-text-warning">${loc('tech_rocketry')}</span>`, `<span class="has-text-warning">${loc('tech_artificial_intelligence')}</span>`, `<span class="has-text-warning">${loc('tech_quantum_computing')}</span>`,
-                `<span class="has-text-warning">${loc('tech_virtual_reality')}</span>`, `<span class="has-text-warning">${loc('tech_shields')}</span>`, `<span class="has-text-warning">${loc('tech_ai_core')}</span>`, `<span class="has-text-warning">${loc('tech_graphene_processing')}</span>`,
-                `<span class="has-text-warning">${loc('tech_nanoweave')}</span>`, `<span class="has-text-warning">${loc('tech_orichalcum_analysis')}</span>`, `<span class="has-text-warning">${loc('tech_infernium_fuel')}</span>`
-            ].join(', ')
-        ])
-    ],
-    heavy: [
-        loc(`wiki_trait_effect_heavy_ex1`,[rName('Stone'),rName('Cement'),rName('Wrought_Iron')])
-    ],
-    sniper: [
-        loc(`wiki_trait_effect_sniper_ex1`),
-    ],
-    hooved: [
-        loc(`wiki_trait_effect_hooved_ex1`),
-        loc(`wiki_trait_effect_hooved_ex2`,[
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Lumber') ? global.resource.Lumber.name : loc('resource_Lumber_name')}</span>`,
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Copper') ? global.resource.Copper.name : loc('resource_Copper_name')}</span>`,
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Iron') ? global.resource.Iron.name : loc('resource_Iron_name')}</span>`,
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Steel') ? global.resource.Steel.name : loc('resource_Steel_name')}</span>`,
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Adamantite') ? global.resource.Adamantite.name : loc('resource_Adamantite_name')}</span>`,
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Orichalcum') ? global.resource.Orichalcum.name : loc('resource_Orichalcum_name')}</span>`,
-            12,75,150,500,5000
-        ]),
-        loc(`wiki_trait_effect_hooved_ex3`),
-        loc(`wiki_trait_effect_hooved_ex4`,[`<span class="has-text-warning">${5}</span>`]),
-        loc(`wiki_trait_effect_hooved_ex5`,[
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Lumber') ? global.resource.Lumber.name : loc('resource_Lumber_name')}</span>`,
-            `<span class="has-text-warning">${global.resource.hasOwnProperty('Copper') ? global.resource.Copper.name : loc('resource_Copper_name')}</span>`
-        ]),
-    ],
-    instinct: [
-        loc(`wiki_trait_effect_instinct_ex1`,[6.67,loc('galaxy_chthonian'),10])
-    ],
-    logical: [
-        loc(`wiki_trait_effect_logical_ex1`,[
-            global.tech.hasOwnProperty('science') ? global.tech.science : 0,
-            global.tech.hasOwnProperty('high_tech') ? global.tech.high_tech : 0
-        ]),
-    ],
-    high_pop: [
-        loc(`wiki_trait_effect_high_pop_ex1`)
-    ]
-};
-
-function rName(r){
-    let res = global.hasOwnProperty('resource') && global.resource.hasOwnProperty(r) ? global.resource[r].name : loc(`resource_${r}_name`);
-    return `<span class="has-text-warning">${res}</span>`;
 }
 
 export function getTraitDesc(info,trait,opts){
